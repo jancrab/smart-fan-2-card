@@ -1,0 +1,24 @@
+{
+  "name": "smart-fan-2-card",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Home Assistant dashboard card for Smart Fan 2 and compatible fan entities",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test",
+    "check": "npm test && npm run build",
+    "dev": "node scripts/dev.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "lit": "^3.3.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "happy-dom": "^21.0.1"
+  }
+}

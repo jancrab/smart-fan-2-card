@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smart Fan 2 · Karten-Vorschau</title>
+<style>
+  body { margin:0; padding:40px; background:#e7ede7; color:#203a35; font-family:Aptos,sans-serif; }
+  main { max-width:1150px; margin:auto; } h1 { font-weight:400; font-size:32px; } .label { color:#6b7e73; font-size:12px; letter-spacing:.12em; text-transform:uppercase; }
+  .layouts { display:grid; grid-template-columns:350px minmax(0,1fr); gap:30px; align-items:start; margin-top:30px; }
+  smart-fan-2-card { display:block; } ha-card { box-shadow:0 12px 40px #203a3510; } #log { font-size:12px; margin-top:28px; white-space:pre-wrap; overflow-wrap:anywhere; } @media(max-width:950px) { .layouts { grid-template-columns:1fr; } body { padding:20px; } .compact { max-width:350px; } }
+</style>
+<main><p class="label">Lokale Vorschau · simulierte Geräte</p><h1>Eine Karte. Zwei Perspektiven.</h1>
+<div class="layouts"><section class="compact"><p class="label">Schmal / Dashboard</p><smart-fan-2-card id="compact"></smart-fan-2-card></section><section><p class="label">Breit / Web UI</p><smart-fan-2-card id="wide"></smart-fan-2-card></section></div><p id="log" role="status">Bereit. Bedienelemente ausprobieren.</p></main>
+<script type="module">
+class DemoIcon extends HTMLElement {
+  connectedCallback() {
+    const shadow=this.attachShadow({mode:'open'});
+    shadow.innerHTML='<style>:host{display:inline-flex;align-items:center;justify-content:center;width:var(--mdc-icon-size,24px);height:var(--mdc-icon-size,24px)}span{font-size:var(--mdc-icon-size,24px);line-height:1}</style><span></span>';
+    shadow.querySelector('span').textContent=({ 'mdi:fan': '✣', 'mdi:power': '⏻', 'mdi:leaf': '♧', 'mdi:rotate-left': '↶', 'mdi:arrow-left-right': '↔' })[this.getAttribute('icon')] || '•';
+  }
+}
+customElements.define('ha-icon', DemoIcon);
+await import('../dist/smart-fan-2-card.js');
+let state = { state:'on', attributes:{ friendly_name:'Smartmi Standing Fan 2S', supported_features:59, percentage:33, percentage_step:1, oscillating:true, preset_modes:['Straight Wind','Natural Wind'], preset_mode:'Straight Wind' } };
+const cards = ['compact','wide'].map(layout => { const card=document.getElementById(layout);card.setConfig({entity:'fan.demo',layout,left_entity:'script.left',name:'Wohnzimmer'});return card; });
+function update() { const hass={states:{'fan.demo':state,'script.left':{state:'off'}},callService:async(domain,service,data)=>{
+  document.getElementById('log').textContent=JSON.stringify({domain,service,...data},null,2);
+  state={...state,attributes:{...state.attributes}};
+  if(service==='turn_off' && domain==='fan') state.state='off';
+  if(service==='turn_on' && domain==='fan') state.state='on';
+  if(service==='set_percentage') { state.attributes.percentage=data.percentage; state.state=data.percentage?'on':'off'; }
+  if(service==='set_preset_mode') state.attributes.preset_mode=data.preset_mode;
+  if(service==='oscillate') state.attributes.oscillating=data.oscillating;
+  update();
+}};cards.forEach(card=>{card.hass=hass;});}update();
+</script>
+</html>
