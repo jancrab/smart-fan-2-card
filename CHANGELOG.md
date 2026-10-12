@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1
+
+- Optionaler Schwenkbereich-Slider erscheint nur bei eingeschaltetem Ventilator und aktiver Oszillation.
+- Beim Abschalten der Oszillation wird er ausgeblendet; beim erneuten Einschalten zeigt er den aktuellen Winkelwert aus Home Assistant. Der Sichtbarkeitswechsel sendet keine Winkelbefehle.
+- Verhalten beim Zustandswechsel getestet. Build und alle 23 Tests erfolgreich.
+
 ## 0.6.0
 
 - Neue Alltagsprofil-Taste neben Cycling: standardmäßig Natural, 66 % und Oszillation mit 30° Schwenkbereich.

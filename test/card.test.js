@@ -139,5 +139,13 @@ test('optional sweep slider discovers the fan angle and targets the number servi
   slider.dispatchEvent(new Event('change'));
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.deepEqual(calls[0], ['number', 'set_value', { value: 90, entity_id: 'number.test_oscillation_angle' }]);
+  const withOscillation = oscillating => ({ ...card.hass, states: { ...card.hass.states, 'fan.test': { ...card.hass.states['fan.test'], attributes: { ...card.hass.states['fan.test'].attributes, oscillating } } } });
+  card.hass = withOscillation(false);
+  await card.updateComplete;
+  assert.equal(root.querySelector('.angle'), null);
+  card.hass = withOscillation(true);
+  await card.updateComplete;
+  assert.equal(root.querySelector('.angle input').value, '53');
+  assert.equal(calls.length, 1, 'visibility changes must not send commands');
   assert.equal(resolveAngleEntity({ states: { 'number.other_oscillation_angle': {} } }, { entity: 'fan.test' }), undefined);
 });

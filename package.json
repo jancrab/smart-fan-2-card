@@ -1,6 +1,6 @@
 {
   "name": "smart-fan-2-card",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "type": "module",
   "description": "Home Assistant dashboard card for Smart Fan 2 and compatible fan entities",

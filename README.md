@@ -2,7 +2,7 @@
 
 Home-Assistant-Dashboard-Karte für Smartmi Standing Fan 2S / Smart Fan 2 und andere `fan.*`-Entitäten. Der visuelle Editor bietet alle Fan-Entitäten zur Auswahl an. Name und unterstützte Funktionen werden aus der ausgewählten Entität übernommen.
 
-Aktuelle Version: **0.6.0**. Vereinfachter Editor mit automatischer Übernahme der Fan-Eigenschaften und optionalem Schwenkbereich-Slider.
+Aktuelle Version: **0.6.1**. Vereinfachter Editor mit automatischer Übernahme der Fan-Eigenschaften und optionalem Schwenkbereich-Slider.
 
 ![Schmales und breites Layout im Dark Mode](docs/dark-preview.png)
 
@@ -27,7 +27,7 @@ Offizielle Anleitungen: [Allgemeine Anforderungen](https://hacs.xyz/docs/publish
 ### Manuelle Installation
 
 1. `dist/smart-fan-2-card.js` nach `/config/www/smart-fan-2-card.js` kopieren.
-2. Unter Einstellungen → Dashboards → Ressourcen die URL `/local/smart-fan-2-card.js?v=0.6.0` als **JavaScript-Modul** hinzufügen (erweiterter Modus ggf. aktivieren).
+2. Unter Einstellungen → Dashboards → Ressourcen die URL `/local/smart-fan-2-card.js?v=0.6.1` als **JavaScript-Modul** hinzufügen (erweiterter Modus ggf. aktivieren).
 3. Browser vollständig neu laden, dann Dashboard bearbeiten → Karte hinzufügen → **Smart Fan 2 Card** → Fan-Entität und Layout auswählen.
 
 Bei einem Update die Datei ersetzen und die bestehende Ressourcen-URL mit einem neuen `?v=…`-Wert aktualisieren, damit der Browser die neue Datei lädt. Keine zweite Ressource für dieselbe Karte anlegen. Ein Home-Assistant-Neustart ist dafür nicht erforderlich.
@@ -81,7 +81,7 @@ show_angle_slider: true
 angle_entity: number.smartmi_standing_fan_2s_oscillation_angle
 ```
 
-Der Slider setzt den Schwenkbereich über `number.set_value`; er steuert keine absolute Kopfposition und schaltet Oszillation nicht automatisch ein. Ohne verfügbare Winkel-Entität zeigt die Karte einen Hinweis. Standardmäßig ist der Slider ausgeblendet.
+Der Slider setzt den Schwenkbereich über `number.set_value`; er steuert keine absolute Kopfposition und schaltet Oszillation nicht automatisch ein. Ohne verfügbare Winkel-Entität zeigt die Karte einen Hinweis. Standardmäßig ist der Slider deaktiviert. Wenn aktiviert, erscheint er nur bei eingeschaltetem Ventilator und aktiver Oszillation. Beim Abschalten der Oszillation wird er ausgeblendet; beim Einschalten zeigt er den aktuellen Winkel aus Home Assistant. Dadurch wird kein Winkel automatisch verändert.
 
 ```yaml
 natural_preset: Natural Wind # exakt wie in preset_modes

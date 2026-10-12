@@ -142,7 +142,7 @@ export class SmartFan2Card extends LitElement {
                 </g><path d="M20.2 2.7c0-1.2 1-2.2 2.3-2.2 1.4 0 2.7.9 3.1 2.1l-2.8 1.4c-1.4.6-2.6-.1-2.6-1.3Z" fill="currentColor"/>
               </svg>`}</button>
           </div>
-          ${this._config.show_angle_slider ? angleAvailable ? html`<label class="speed angle"><span class="angle-label">Schwenkbereich</span>
+          ${this._config.show_angle_slider && view.available && view.on && view.oscillate && state.attributes.oscillating === true ? angleAvailable ? html`<label class="speed angle"><span class="angle-label">Schwenkbereich</span>
             <input type="range" min=${angleMin} max=${angleMax} step=${angleStep > 0 ? angleStep : 1} .value=${String(angle)} aria-label="Schwenkbereich" ?disabled=${disabled || !view.on}
               @input=${event => { this.renderRoot.querySelector('.angle output').value = `${event.target.value}°`; }}
               @change=${event => this._call('set_value', { value: Math.max(angleMin, Math.min(angleMax, Number(event.target.value))) }, 'number', angleEntity)}>
