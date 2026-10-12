@@ -1,5 +1,6 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { fanView, validateConfig, naturalModes, nextStrength, leftAction } from './fan.js';
+import { cyclingSettings, runPositionCycle } from './cycling.js';
 
 export class SmartFan2Card extends LitElement {
   static properties = {
@@ -7,9 +8,11 @@ export class SmartFan2Card extends LitElement {
     _config: { state: true },
     _pending: { state: true },
     _error: { state: true },
+    _cycling: { state: true },
   };
 
-  setConfig(config) { this._config = validateConfig(config); }
+  setConfig(config) { this._cycleAbort?.abort(); this._config = validateConfig(config); }
+  disconnectedCallback() { this._cycleAbort?.abort(); super.disconnectedCallback(); }
   static getStubConfig(hass) {
     return { entity: Object.keys(hass?.states || {}).find(id => id.startsWith('fan.')) || 'fan.smart_fan_2' };
   }
@@ -18,6 +21,20 @@ export class SmartFan2Card extends LitElement {
   getGridOptions() { return { columns: 12, min_columns: this._config?.layout === 'wide' ? 12 : 6 }; }
 
   async _cycleLeft() {
+    if (this._cycling) { this._cycleAbort?.abort(); return; }
+    if (this._config.cycling_mode === 'position') {
+      const view = fanView(this.hass?.states[this._config.entity]);
+      if (this._pending || !view.available || !view.on || !view.oscillate) return;
+      this._cycleAbort = new AbortController();
+      this._cycling = true;
+      this._pending = true;
+      this._error = '';
+      const config = { ...this._config };
+      try { await runPositionCycle(() => this.hass, config, this._cycleAbort.signal); }
+      catch (error) { this._error = error?.message || 'Cycling fehlgeschlagen.'; }
+      finally { this._cycling = false; this._pending = false; }
+      return;
+    }
     const action = leftAction(this._config);
     const view = fanView(this.hass?.states[this._config.entity]);
     const target = this.hass?.states[this._config.left_entity];
@@ -55,6 +72,11 @@ export class SmartFan2Card extends LitElement {
     const strength = view.percentage <= 33 ? 1 : view.percentage <= 66 ? 2 : 3;
     const target = this.hass.states[this._config.left_entity];
     const canMoveLeft = !!target && target.state !== 'unavailable' && (!['number', 'select'].includes(this._config.left_entity?.split('.')[0]) || target.state !== 'unknown');
+    let canCyclePosition = false;
+    if (this._config.cycling_mode === 'position') {
+      try { cyclingSettings(this.hass, this._config); canCyclePosition = true; } catch { /* Missing feedback keeps the button disabled. */ }
+    }
+    const canCycle = this._config.cycling_mode === 'position' ? canCyclePosition : canMoveLeft;
     const status = !state ? 'Entität nicht gefunden' : !view.available ? 'Nicht verfügbar' : view.on ? 'Läuft' : 'Aus';
     return html`
       <ha-card class=${this._config.layout}>
@@ -83,8 +105,8 @@ export class SmartFan2Card extends LitElement {
               @click=${() => this._call('set_preset_mode', { preset_mode: natural ? modes.normal : modes.natural })}><ha-icon icon="mdi:leaf"></ha-icon><span>${natural ? 'Natural' : 'Normal'}</span></button>
             ${view.speed ? html`<button class="strength" ?disabled=${disabled} aria-label=${`Stärke ${strength}, nächste Stufe wählen`}
               @click=${() => this._call('set_percentage', { percentage: nextStrength(view.percentage).percentage })}><b>${view.on ? strength : '—'}</b><span>Stärke 1–3</span></button>` : nothing}
-            <button class="cycling" ?disabled=${disabled || !view.on || !view.oscillate || !canMoveLeft} title=${canMoveLeft ? 'Schwenken stoppen und ganz nach links drehen' : 'Links-Aktion im Editor auswählen'}
-              @click=${() => this._cycleLeft()}><ha-icon icon="mdi:rotate-left"></ha-icon><span>Cycling</span></button>
+            <button class="cycling" ?disabled=${!this._cycling && (disabled || !view.on || !view.oscillate || !canCycle)} title=${this._config.cycling_mode === 'position' ? `Schwenken bis ${this._config.target_angle}° mit Positionsrückmeldung` : canMoveLeft ? 'Schwenken stoppen und ganz nach links drehen' : 'Cycling im Editor konfigurieren'}
+              @click=${() => this._cycleLeft()}><ha-icon icon="mdi:rotate-left"></ha-icon><span>${this._cycling ? 'Stoppen' : 'Cycling'}</span></button>
           </div>
           ${view.oscillate ? html`<button class="oscillate" ?disabled=${disabled || !view.on} aria-pressed=${!!state.attributes.oscillating}
             @click=${() => this._call('oscillate', { oscillating: !state.attributes.oscillating })}><ha-icon icon="mdi:arrow-left-right"></ha-icon> Schwenken <span>${state.attributes.oscillating ? 'An' : 'Aus'}</span></button>` : nothing}
@@ -127,9 +149,17 @@ class SmartFan2CardEditor extends LitElement {
       { name: 'layout', selector: { select: { options: [{ value: 'compact', label: 'Schmal · Dashboard' }, { value: 'wide', label: 'Breit · Web UI' }] } } },
       { name: 'natural_preset', selector: { text: {} } },
       { name: 'normal_preset', selector: { text: {} } },
+      { name: 'cycling_mode', selector: { select: { options: [{ value: 'action', label: 'Oszillation aus → Links-Aktion' }, { value: 'position', label: 'Maximal schwenken → am Zielwinkel stoppen' }] } } },
+      { name: 'angle_entity', selector: { entity: { domain: 'number' } } },
+      { name: 'position_entity', selector: { entity: { domain: ['sensor', 'number'] } } },
+      { name: 'target_angle', selector: { number: { min: -360, max: 360, step: 1, mode: 'box', unit_of_measurement: '°' } } },
+      { name: 'cycling_max_angle', selector: { number: { min: 0, max: 360, step: 1, mode: 'box', unit_of_measurement: '°' } } },
+      { name: 'target_tolerance', selector: { number: { min: 0, max: 20, step: 1, mode: 'box', unit_of_measurement: '°' } } },
+      { name: 'cycling_timeout', selector: { number: { min: 1, max: 120, step: 1, mode: 'box', unit_of_measurement: 's' } } },
       { name: 'left_entity', selector: { entity: { domain: ['button', 'script', 'number', 'select'] } } },
       { name: 'left_value', selector: { text: {} } },
-    ]} .computeLabel=${field => ({ entity: 'Ventilator', name: 'Name', subtitle: 'Untertitel', layout: 'Layout', natural_preset: 'Natural-Modus (optional: exakter Preset-Name)', normal_preset: 'Normal-Modus (optional: exakter Preset-Name)', left_entity: 'Cycling: Aktion für ganz links', left_value: 'Cycling: Zielwert für number/select' })[field.name]}
+    ]} .computeLabel=${field => ({ entity: 'Ventilator', name: 'Name', subtitle: 'Untertitel', layout: 'Layout', natural_preset: 'Natural-Modus (optional: exakter Preset-Name)', normal_preset: 'Normal-Modus (optional: exakter Preset-Name)', cycling_mode: 'Cycling: Ablauf', angle_entity: 'Cycling: Schwenkbereich-Entität', position_entity: 'Cycling: tatsächliche Kopfposition (Live-Rückmeldung)', target_angle: 'Cycling: Zielwinkel', cycling_max_angle: 'Cycling: maximaler Schwenkbereich (leer = Entitätsmaximum)', target_tolerance: 'Cycling: Zieltoleranz (Standard 2°)', cycling_timeout: 'Cycling: Zeitlimit (Standard 30 s)', left_entity: 'Cycling: Aktion für ganz links', left_value: 'Cycling: Zielwert für number/select' })[field.name]}
+    .computeHelper=${field => field.name === 'position_entity' ? 'Muss sich während der Bewegung ändern. oscillation_angle ist der eingestellte Schwenkbereich und keine Positionsrückmeldung.' : field.name === 'cycling_mode' ? 'Zielwinkel-Steuerung läuft im geöffneten Browser. Für unbeaufsichtigten Betrieb ein Home-Assistant-Script als Links-Aktion verwenden.' : undefined}
     @value-changed=${event => this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: { ...this._config, ...event.detail.value } }, bubbles: true, composed: true }))}></ha-form>`;
   }
 }

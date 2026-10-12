@@ -62,6 +62,10 @@ test('a button with no previous press remains usable', async () => {
   await card._cycleLeft();
   assert.deepEqual(calls[1], ['button', 'press', { entity_id: 'button.left' }]);
 });
+test('position Cycling is disabled until real feedback is available', async () => {
+  const { root } = await fixture(state(), { cycling_mode: 'position', angle_entity: 'number.sweep', position_entity: 'sensor.position', target_angle: -60 });
+  assert.equal(root.querySelector('.cycling').disabled, true);
+});
 test('Cycling does not move if stopping oscillation fails', async () => {
   const { card, calls } = await fixture(state(), { left_entity: 'script.left' });
   card.hass.callService = async (...args) => { calls.push(args); throw new Error('offline'); };
@@ -90,6 +94,8 @@ test('editor filters selectable entities to fan domain and emits preserved confi
   await editor.updateComplete;
   const form = editor.shadowRoot.querySelector('ha-form');
   assert.equal(form.schema[0].selector.entity.domain, 'fan');
+  assert.equal(form.schema.find(field => field.name === 'target_angle').selector.number.unit_of_measurement, '°');
+  assert.deepEqual(form.schema.find(field => field.name === 'position_entity').selector.entity.domain, ['sensor', 'number']);
   let result;
   editor.addEventListener('config-changed', event => { result = event.detail.config; });
   form.dispatchEvent(new CustomEvent('value-changed', { detail: { value: { entity: 'fan.other' } } }));

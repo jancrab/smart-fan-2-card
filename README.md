@@ -11,6 +11,7 @@ Home-Assistant-Dashboard-Karte für Smartmi Standing Fan 2S / Smart Fan 2 und an
 - Normal/Natural-Taste: blau für Normal, grün für Natural. Erkennt unter anderem `Straight Wind` / `Natural Wind`; abweichende Namen im Editor zuordnen.
 - Stärke-Taste: schaltet zyklisch auf 33, 66 und 100 Prozent.
 - Cycling-Taste: deaktiviert zuerst Oszillation und führt anschließend eine konfigurierte Aktion für „ganz links“ aus.
+- Alternativer Cycling-Ablauf im Editor: maximalen Schwenkbereich einstellen, Oszillation starten und bei konfigurierbarem Zielwinkel stoppen. Benötigt eine getrennte Entität für die echte Kopfposition.
 - Theme-Variablen, Tastaturbedienung, reduzierte Animation, Fehlermeldungen und Schutz gegen parallele Bedienbefehle.
 
 ## Privat und HACS
@@ -51,6 +52,24 @@ left_entity: script.ventilator_ganz_links
 `left_entity` kann eine `button`-, `script`-, `number`- oder `select`-Entität sein. Bei `number` zusätzlich `left_value` mit dem vom Gerät erwarteten Zahlenwert angeben; bei `select` mit dem exakten Optionsnamen. Die Taste bleibt ohne verfügbare Aktion deaktiviert. Ein Links-Schritt ist keine absolute Endposition: nur eine Aktion zuordnen, die tatsächlich bis zum linken Anschlag fährt. Das Script darf keine Wartezeit vor dem Stoppen der Oszillation voraussetzen; nötige gerätespezifische Wartezeiten gehören ins Script.
 
 `number.smartmi_standing_fan_2s_oscillation_angle` legt den Schwenkbereich fest und darf nicht mit einer absoluten Kopfposition verwechselt werden. Diese Entität wird deshalb nicht automatisch als Links-Aktion zugeordnet.
+
+### Cycling mit Zielwinkel
+
+Im visuellen Editor **Cycling: Ablauf → Maximal schwenken → am Zielwinkel stoppen** wählen. Dort sind Schwenkbereich-Entität, Positionsrückmeldung, Zielwinkel, optionaler Maximalwinkel, Toleranz und Zeitlimit einstellbar. Beispiel mit einer hypothetischen Positionsentität:
+
+```yaml
+cycling_mode: position
+angle_entity: number.smartmi_standing_fan_2s_oscillation_angle
+position_entity: sensor.dein_ventilator_kopfposition # muss wirklich existieren und die Bewegung melden
+target_angle: -60
+target_tolerance: 2
+cycling_timeout: 30
+# cycling_max_angle: 120 # ohne Angabe: max-Attribut der angle_entity
+```
+
+Schwenkbereich und Position dürfen nicht dieselbe Entität sein. Ein erneut gedrückter Cycling-Button bricht den Ablauf ab und sendet einen Stop-Befehl. Fehlende Rückmeldung, Zeitlimit oder das Entfernen der Karte stoppen ebenfalls den Ablauf. Der eingestellte Schwenkbereich bleibt erhalten. Die Stop-Genauigkeit hängt von Aktualisierungsintervall und Befehlslatenz ab; beim Überspringen des Zielwinkels wird nachträglich gestoppt.
+
+Die Steuerung läuft im Browser: Ein vollständiger Browserabsturz, geschlossenes Fenster oder Netzwerkverlust kann den Stop-Befehl verhindern. Für einen vom geöffneten Dashboard unabhängigen Ablauf ein serverseitiges Home-Assistant-Script als Links-Aktion verwenden. Ob dein Gerät eine echte Positionsrückmeldung anbietet, muss am Gerät geprüft werden. [Analyse der Referenzkarte](docs/reference-features.md).
 
 Natural bleibt ohne eindeutiges Moduspaar deaktiviert. Die Karte steuert über die normale Fan-API, nicht direkt über Xiaomi-Cloud-Zugangsdaten. Zusätzliche Gerätefunktionen können je nach Xiaomi-Home-Modell als separate Entitäten vorliegen. Ein Test am realen Gerät steht aus.
 

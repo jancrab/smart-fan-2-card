@@ -8,6 +8,17 @@ export function validateConfig(config) {
     if (config[key] !== undefined && typeof config[key] !== 'string') throw new Error(`${key} muss Text sein.`);
   }
   if (config.layout !== undefined && !['compact', 'wide'].includes(config.layout)) throw new Error('layout muss compact oder wide sein.');
+  if (config.cycling_mode !== undefined && !['action', 'position'].includes(config.cycling_mode)) throw new Error('Cycling-Modus muss action oder position sein.');
+  if (config.cycling_mode === 'position') {
+    if (!/^number\.[a-z0-9_]+$/.test(config.angle_entity || '')) throw new Error('Eine number-Entität für den Schwenkbereich auswählen.');
+    if (!/^(sensor|number)\.[a-z0-9_]+$/.test(config.position_entity || '')) throw new Error('Eine Entität für die tatsächliche Kopfposition auswählen.');
+    if (config.angle_entity === config.position_entity) throw new Error('Schwenkbereich und Positionsrückmeldung müssen getrennte Entitäten sein.');
+    if (config.target_angle === undefined || config.target_angle === '' || !Number.isFinite(Number(config.target_angle))) throw new Error('Cycling-Zielwinkel angeben.');
+    for (const [key, min, max] of [['target_tolerance', 0, 20], ['cycling_timeout', 1, 120]]) {
+      if (config[key] !== undefined && (!Number.isFinite(Number(config[key])) || Number(config[key]) < min || Number(config[key]) > max)) throw new Error(`${key}: gültiger Bereich ${min}–${max}.`);
+    }
+    if (config.cycling_max_angle !== undefined && !Number.isFinite(Number(config.cycling_max_angle))) throw new Error('Maximalen Schwenkbereich als Zahl angeben.');
+  }
   if (config.left_entity && !/^(button|script|number|select)\.[a-z0-9_]+$/.test(config.left_entity)) throw new Error('Links-Aktion benötigt button, script, number oder select.');
   if (config.left_entity?.startsWith('number.') && (config.left_value === '' || !Number.isFinite(Number(config.left_value)))) throw new Error('Für number muss left_value eine Zahl sein.');
   if (config.left_entity?.startsWith('select.') && !config.left_value) throw new Error('Für select muss left_value eine Option sein.');

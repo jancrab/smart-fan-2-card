@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+- Cycling im visuellen Editor: Ablauf, Schwenkbereich-Entität, Positionsrückmeldung, Zielwinkel, Maximalwinkel, Toleranz und Zeitlimit einstellbar.
+- Optionales Schwenken bis zum Zielwinkel mit Stop bei Erreichen/Überschreiten, Abbruch, verlorener Rückmeldung und Timeout.
+- Analyse der Referenzkarte und der unterschiedlichen Xiaomi-Integrationen dokumentiert.
+
+Der Zielwinkel-Ablauf benötigt echte Positionsrückmeldung; sie ist für den konkreten Smartmi noch nicht bestätigt. Browserausfall oder Verbindungsverlust kann einen Stop verhindern.
+
 ## 0.1.0
 
 - Erste Version mit schmalem und breitem Layout.
