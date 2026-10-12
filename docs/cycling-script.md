@@ -10,6 +10,20 @@ Die [Referenzkarte](https://github.com/ikaruswill/lovelace-fan-xiaomi/blob/maste
 
 ## Script-Vorlage installieren
 
+### Direkt aus der Karte
+
+Mit Administratorrechten kann der Karteneditor das Script selbst erstellen:
+
+1. **Cycling → Ablauf → Maximal schwenken → am Zielwinkel stoppen** auswählen.
+2. Schwenkbereich-Entität, einen **getrennten echten Positionssensor**, Zielgradzahl und optional Zeitlimit/Toleranz auswählen.
+3. **Positionierungs-Script anlegen** drücken. Die Karte speichert ein eigenständiges Script über die Home-Assistant-Konfigurations-API. Dabei wird es nicht ausgeführt. Es wird eine neue zufällige Script-ID verwendet; bestehende Scripts werden nicht gezielt geändert.
+4. Sobald seine Entitäts-ID verfügbar ist, verknüpft die Karte es als Cycling-Aktion und wechselt zum Aktionsablauf. Falls die Entität noch nicht gefunden wurde, über **Script öffnen** nachsehen und die Entität manuell als Cycling-Aktion auswählen.
+5. Weitere Zielwinkeländerungen für dieses serverseitige Script über **Script öffnen** vornehmen. Spätere Änderungen der Kartenfelder ändern ein bereits angelegtes Script nicht automatisch. Das Script bleibt auch nach Entfernen der Karte bestehen.
+
+Ohne Administratorrechte oder gültige echte Positionsrückmeldung bleibt der Erstellungsbutton gesperrt. Eine abgewiesene API-Anfrage wird im Editor angezeigt. Deine bislang genannten Geräteentitäten reichen für diese Positionierung weiterhin nicht aus.
+
+### Alternativ: Blaupause importieren
+
 Die [Script-Blueprint-Datei](../blueprints/script/fan_target_position.yaml) ist nur für Geräte mit zusätzlicher, echter numerischer Positionsrückmeldung gedacht. Sie erzeugt keinen Positionssensor und darf nicht mit dem Schwenkbereich als Rückmeldung betrieben werden.
 
 1. In Home Assistant unter Einstellungen → Automatisierungen & Szenen → Blaupausen die URL importieren:

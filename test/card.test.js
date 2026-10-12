@@ -45,11 +45,12 @@ test('actual buttons send correct fan services and target', async () => {
   root.querySelector('.strength').click();
   await new Promise(resolve => setTimeout(resolve, 0));
   await card.updateComplete;
-  assert.deepEqual(calls[1], ['fan', 'set_percentage', { percentage: 66, entity_id: 'fan.test' }]);
+  assert.deepEqual(calls[1], ['homeassistant', 'update_entity', { entity_id: 'fan.test' }]);
+  assert.deepEqual(calls[2], ['fan', 'set_percentage', { percentage: 66, entity_id: 'fan.test' }]);
   root.querySelector('.power').click();
   await new Promise(resolve => setTimeout(resolve, 0));
   await card.updateComplete;
-  assert.deepEqual(calls[2], ['fan', 'turn_off', { entity_id: 'fan.test' }]);
+  assert.deepEqual(calls[3], ['fan', 'turn_off', { entity_id: 'fan.test' }]);
 });
 test('Cycling stops oscillation before running the left action', async () => {
   const { card, calls } = await fixture(state(), { left_entity: 'script.left' });
@@ -57,6 +58,7 @@ test('Cycling stops oscillation before running the left action', async () => {
   assert.deepEqual(calls, [
     ['fan', 'oscillate', { entity_id: 'fan.test', oscillating: false }],
     ['fan', 'set_preset_mode', { entity_id: 'fan.test', preset_mode: 'Natural Wind' }],
+    ['homeassistant', 'update_entity', { entity_id: 'fan.test' }],
     ['fan', 'set_percentage', { entity_id: 'fan.test', percentage: 100 }],
     ['script', 'turn_on', { entity_id: 'script.left' }],
   ]);
@@ -125,7 +127,7 @@ test('Xiaomi nature/normal modes override stale mappings and toggle in both dire
   await card.updateComplete;
   root.querySelector('.natural').click();
   await new Promise(resolve => setTimeout(resolve, 0));
-  assert.equal(calls[1][2].preset_mode, 'nature');
+  assert.equal(calls.filter(call => call[1] === 'set_preset_mode')[1][2].preset_mode, 'nature');
 });
 
 test('optional sweep slider discovers the fan angle and targets the number service', async () => {
@@ -170,4 +172,39 @@ test('editor factory loads native HA form before returning an editor on a fresh 
   await Card.getConfigElement();
   assert.equal(loads, 1, 'already loaded HA components must be reused');
   delete window.loadCardHelpers;
+});
+
+test('Natural button refreshes when HA assigns an updated but reused hass object', async () => {
+  const entity = state();
+  entity.attributes = { ...entity.attributes, preset_modes: ['nature', 'normal'], preset_mode: 'normal' };
+  const { card, root } = await fixture(entity);
+  assert.equal(root.querySelector('.natural').getAttribute('aria-pressed'), 'false');
+  card.hass.states['fan.test'] = { ...entity, attributes: { ...entity.attributes, preset_mode: 'nature' } };
+  card.hass = card.hass;
+  await card.updateComplete;
+  assert.equal(root.querySelector('.natural').getAttribute('aria-pressed'), 'true');
+  assert.equal(root.querySelector('.natural ha-icon').getAttribute('icon'), 'mdi:leaf');
+});
+
+test('editor creates and links a positioning script without running it', async () => {
+  const editor = document.createElement('smart-fan-2-card-editor');
+  editor.setConfig({ type: 'custom:smart-fan-2-card', entity: 'fan.test', cycling_mode: 'position', angle_entity: 'number.sweep', position_entity: 'sensor.position', target_angle: -60 });
+  let scriptId, result;
+  editor.hass = {
+    user: { is_admin: true }, states: {
+      'fan.test': state(), 'number.sweep': { state: '30', attributes: { min: 1, max: 120 } }, 'sensor.position': { state: '0' },
+    },
+    callApi: async (method, path) => { assert.equal(method, 'POST'); scriptId = path.split('/').at(-1); },
+    callWS: async () => [{ platform: 'script', unique_id: scriptId, entity_id: 'script.generated_position' }],
+  };
+  editor.addEventListener('config-changed', event => { result = event.detail.config; });
+  document.body.append(editor);
+  await editor.updateComplete;
+  assert.equal(editor.shadowRoot.querySelector('.setup-script').disabled, false);
+  await editor._createScript();
+  await editor.updateComplete;
+  assert.equal(result.cycling_mode, 'action');
+  assert.equal(result.left_entity, 'script.generated_position');
+  assert.equal(editor._scriptResult.linked, true);
+  assert.equal(editor.shadowRoot.querySelector('.setup-script').disabled, true);
 });

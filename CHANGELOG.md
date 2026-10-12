@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.0
+
+- Cycling-Editor kann ein serverseitiges Positionierungs-Script mit neuer ID anlegen und als Kartenaktion verknüpfen. Erfordert Administratorrechte und einen echten Live-Positionssensor; legt keine vermeintliche Rückmeldung aus dem Schwenkbereich an.
+- Script-Erstellung führt keine Gerätebewegung aus. Ein gespeichertes Script bleibt bei fehlender Registry-Auskunft über seinen Edit-Link erreichbar, statt erneut angelegt zu werden.
+- Karte aktualisiert ihre Anzeige auch bei erneut übergebenem identischem `hass`-Objekt.
+- Nach einem Preset-Wechsel wird der Gerätezustand über `homeassistant.update_entity` abgefragt. Profile setzen ihre Leistung erst nach dieser Abfrage, um den Moduswechsel bei Polling-Integrationen zu berücksichtigen.
+- Regressionstest reproduziert die ausbleibende Natural-Anzeige bei wiederverwendetem `hass`-Objekt. Script-Erstellung, fehlende Berechtigung und fehlende Positionsrückmeldung getestet.
+
+Build und alle 29 Tests erfolgreich. API-Erstellung und Natural-Verhalten noch nicht direkt in der betroffenen Home-Assistant-Instanz geprüft.
+
 ## 0.6.2
 
 - Karteneditor lädt Home Assistants native Formular- und Selector-Komponenten vor dem Öffnen. Auf einem frisch geladenen Dashboard konnte `ha-form` bisher noch unregistriert sein, sodass die Auswahlfelder nicht funktionierten.

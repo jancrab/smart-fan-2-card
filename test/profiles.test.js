@@ -18,6 +18,7 @@ test('everyday sends exact Natural/66/30 and enables oscillation last', async ()
   assert.deepEqual(calls.map(call => [call[1], call[2]]), [
     ['oscillate', { entity_id: config.entity, oscillating: false }],
     ['set_preset_mode', { entity_id: config.entity, preset_mode: 'nature' }],
+    ['update_entity', { entity_id: config.entity }],
     ['set_percentage', { entity_id: config.entity, percentage: 66 }],
     ['set_value', { entity_id: 'number.smartmi_oscillation_angle', value: 30 }],
     ['oscillate', { entity_id: config.entity, oscillating: true }],
@@ -29,8 +30,9 @@ test('cycling defaults to nature/100 and does not claim to move the head', async
   await applyFanProfile(hass, config, 'cycling');
   assert.equal(calls[0][2].oscillating, false);
   assert.equal(calls[1][2].preset_mode, 'nature');
-  assert.equal(calls[2][2].percentage, 100);
-  assert.equal(calls.length, 3);
+  assert.equal(calls[2][0], 'homeassistant');
+  assert.equal(calls[3][2].percentage, 100);
+  assert.equal(calls.length, 4);
 });
 
 test('profiles honor custom Normal mode and reject impossible angles before commands', async () => {

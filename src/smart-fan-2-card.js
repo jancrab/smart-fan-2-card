@@ -3,10 +3,11 @@ import { cardStyles } from './styles.js';
 import { fanView, validateConfig, naturalModes, nextStrength, leftAction, resolveAngleEntity } from './fan.js';
 import { cyclingSettings, runPositionCycle } from './cycling.js';
 import { profileSettings, applyFanProfile } from './profiles.js';
+import { createPositionScript, positionScript } from './script-setup.js';
 
 export class SmartFan2Card extends LitElement {
   static properties = {
-    hass: { attribute: false },
+    hass: { attribute: false, hasChanged: () => true },
     _config: { state: true },
     _pending: { state: true },
     _error: { state: true },
@@ -80,6 +81,9 @@ export class SmartFan2Card extends LitElement {
     this._error = '';
     try {
       await this.hass.callService(domain, service, { ...data, entity_id: entityId });
+      if (domain === 'fan' && service === 'set_preset_mode') {
+        await this.hass.callService('homeassistant', 'update_entity', { entity_id: entityId });
+      }
     } catch (error) {
       this._error = error?.message || 'Befehl fehlgeschlagen. Bitte erneut versuchen.';
     } finally { this._pending = false; }
@@ -170,8 +174,24 @@ export class SmartFan2Card extends LitElement {
 }
 
 class SmartFan2CardEditor extends LitElement {
-  static properties = { hass: { attribute: false }, _config: { state: true } };
+  static properties = { hass: { attribute: false }, _config: { state: true }, _creatingScript: { state: true }, _scriptResult: { state: true }, _scriptError: { state: true } };
   setConfig(config) { this._config = { ...config }; }
+  async _createScript() {
+    if (this._creatingScript || this._scriptResult) return;
+    this._creatingScript = true;
+    this._scriptError = '';
+    try {
+      const sourceConfig = this._config;
+      const result = await createPositionScript(this.hass, sourceConfig, `smart_fan_2_${crypto.randomUUID().replaceAll('-', '')}`);
+      const unchanged = Object.keys(sourceConfig).every(key => this._config[key] === sourceConfig[key]);
+      const linked = !!result.entityId && unchanged;
+      this._scriptResult = { ...result, linked };
+      if (linked) {
+        this._changed({ stopPropagation() {}, detail: { value: { cycling_mode: 'action', left_entity: result.entityId } } });
+      }
+    } catch (error) { this._scriptError = error?.message || 'Script konnte nicht angelegt werden.'; }
+    finally { this._creatingScript = false; }
+  }
   _changed(event) {
     event.stopPropagation();
     this._config = { ...this._config, ...event.detail.value };
@@ -197,6 +217,10 @@ class SmartFan2CardEditor extends LitElement {
       { name: 'left_value', selector: { text: {} } },
     ];
     const modes = naturalModes(fanView(this.hass.states[this._config.entity]).presets);
+    let canCreateScript = false;
+    if (this._config.cycling_mode === 'position' && this.hass.user?.is_admin) {
+      try { positionScript(this.hass, this._config); canCreateScript = true; } catch { /* Missing real feedback prevents generation. */ }
+    }
     const profileFields = kind => [
       { name: `${kind}_preset`, selector: { select: { options: [{ value: 'nature', label: 'Natural' }, { value: 'normal', label: 'Normal' }] } } },
       { name: `${kind}_percentage`, selector: { number: { min: 1, max: 100, step: 1, mode: 'slider', unit_of_measurement: '%' } } },
@@ -220,9 +244,14 @@ class SmartFan2CardEditor extends LitElement {
         if (field.name === 'cycling_mode') return true;
         if (this._config.cycling_mode === 'position') return ['angle_entity', 'position_entity', 'target_angle', 'cycling_max_angle', 'target_tolerance', 'cycling_timeout'].includes(field.name);
         return field.name === 'left_entity' || (field.name === 'left_value' && /^(number|select)\./.test(this._config.left_entity || ''));
-      }))}</details>`;
+      }))}
+      <p>Script-Erstellung: Ablauf „Maximal schwenken“ auswählen und echten Positionssensor sowie Zielwinkel eintragen. Das Script wird gespeichert, aber dabei nicht ausgeführt.</p>
+      <button class="setup-script" ?disabled=${!canCreateScript || this._creatingScript || !!this._scriptResult} @click=${() => this._createScript()}>${this._creatingScript ? 'Script wird angelegt …' : 'Positionierungs-Script anlegen'}</button>
+      ${this._scriptResult ? html`<p>Script gespeichert. <a href=${`/config/script/edit/${this._scriptResult.scriptId}`}>Script öffnen</a>. ${this._scriptResult.linked ? 'Als Cycling-Aktion verknüpft. Weitere Zielwinkeländerungen im Script vornehmen.' : 'Script-Entität danach als Cycling-Aktion auswählen.'}</p>` : nothing}
+      ${this._scriptError ? html`<p role="alert">${this._scriptError}</p>` : nothing}
+      </details>`;
   }
-  static styles = css`p { color: var(--secondary-text-color); font-size: 13px; } details { border-top: 1px solid var(--divider-color); padding: 12px 0; } summary { cursor: pointer; padding: 4px 0; }`;
+  static styles = css`p { color: var(--secondary-text-color); font-size: 13px; } details { border-top: 1px solid var(--divider-color); padding: 12px 0; } summary { cursor: pointer; padding: 4px 0; } button { min-height: 44px; padding: 0 16px; cursor: pointer; } button:disabled { cursor: not-allowed; opacity: .5; } a { color: var(--primary-color); }`;
 }
 
 if (!customElements.get('smart-fan-2-card')) customElements.define('smart-fan-2-card', SmartFan2Card);

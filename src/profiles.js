@@ -30,6 +30,8 @@ export async function applyFanProfile(hass, config, kind, signal) {
   if (!profile.on) await call('fan', 'turn_on', fan);
   await call('fan', 'oscillate', { ...fan, oscillating: false });
   await call('fan', 'set_preset_mode', { ...fan, preset_mode: profile.mode });
+  // Polling integrations can still report/use the old mode until refreshed.
+  await call('homeassistant', 'update_entity', fan);
   await call('fan', 'set_percentage', { ...fan, percentage: profile.percentage });
   if (kind === 'everyday') {
     await call('number', 'set_value', { entity_id: profile.angleEntity, value: profile.angle });
