@@ -37,9 +37,9 @@
 <script type="module">
 await import('/demo/icons.js');
 await import('../dist/smart-fan-2-card.js');
-let state = { state:'on', attributes:{ friendly_name:'Smartmi Standing Fan 2S', supported_features:59, percentage:33, percentage_step:1, oscillating:true, preset_modes:['Straight Wind','Natural Wind'], preset_mode:'Straight Wind' } };
+let state = { state:'on', attributes:{ friendly_name:'Smartmi Standing Fan 2S', supported_features:59, percentage:33, percentage_step:1, oscillating:true, preset_modes:['normal','nature'], preset_mode:'normal' } };
 let position=0, sweep=30, movement;
-const config = {entity:'fan.demo',cycling_mode:'position',angle_entity:'number.sweep',position_entity:'sensor.position',target_angle:-60,name:'Wohnzimmer'};
+const config = {entity:'fan.demo',show_angle_slider:true,cycling_mode:'position',angle_entity:'number.sweep',position_entity:'sensor.position',target_angle:-60,name:'Wohnzimmer'};
 const cards = ['compact','wide'].map(layout => { const card=document.getElementById(layout);card.setConfig({...config,layout});return card; });
 document.getElementById('target').addEventListener('change',event=>{config.target_angle=Number(event.target.value);cards.forEach(card=>card.setConfig({...config,layout:card.id}));});
 function update() { document.getElementById('position').textContent=`Kopfposition: ${position}°`; const hass={states:{'fan.demo':state,'number.sweep':{state:String(sweep),attributes:{min:1,max:120,step:1}},'sensor.position':{state:String(position)}},callService:async(domain,service,data)=>{

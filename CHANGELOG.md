@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0
+
+- Editor zeigt zunächst nur Ventilator und Layout; Darstellung, manuelle Moduszuordnung und Cycling liegen in optionalen Bereichen.
+- Cycling zeigt nur die zum ausgewählten Ablauf passenden Felder.
+- Optionaler Schwenkbereich-Slider unter den Buttons, mit automatischer Winkel-Entitätszuordnung und Übernahme von Min/Max/Schrittweite.
+- Ungültige alte Preset-Zuordnungen blockieren die automatische Erkennung nicht mehr.
+- Xiaomi-Presets `nature`/`normal` in beiden Richtungen getestet; Vorschau nutzt diese Werte.
+
+Build und alle 20 Tests erfolgreich. Verhalten am echten Gerät noch zu prüfen.
+
 ## 0.4.0
 
 - Fan-Symbol übernimmt Ein/Aus; separaten Power-Button entfernt.

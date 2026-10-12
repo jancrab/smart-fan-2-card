@@ -59,6 +59,9 @@ export const cardStyles = css`
   .settings { min-width: 0; }
   .speed { display: flex; align-items: center; gap: 8px; min-height: 44px; margin: 6px 0; color: var(--muted); }
   .speed ha-icon { --mdc-icon-size: 18px; flex: 0 0 18px; }
+  .angle { margin: 8px 0 0; }
+  .angle-label { font-size: 12px; }
+  .hint { color: var(--muted); font-size: 12px; }
   input { accent-color: var(--accent); }
   input[type=range] { width: 0; min-width: 0; flex: 1; margin: 0; height: 44px; cursor: pointer; }
   output { min-width: 43px; text-align: right; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink); }

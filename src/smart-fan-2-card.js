@@ -1,6 +1,6 @@
-import { LitElement, html, nothing } from 'lit';
+import { LitElement, html, nothing, css } from 'lit';
 import { cardStyles } from './styles.js';
-import { fanView, validateConfig, naturalModes, nextStrength, leftAction } from './fan.js';
+import { fanView, validateConfig, naturalModes, nextStrength, leftAction, resolveAngleEntity } from './fan.js';
 import { cyclingSettings, runPositionCycle } from './cycling.js';
 
 export class SmartFan2Card extends LitElement {
@@ -51,13 +51,13 @@ export class SmartFan2Card extends LitElement {
     } finally { this._pending = false; }
   }
 
-  async _call(service, data = {}) {
+  async _call(service, data = {}, domain = 'fan', entityId = this._config.entity) {
     const state = this.hass?.states[this._config?.entity];
     if (this._pending || !fanView(state).available) return;
     this._pending = true;
     this._error = '';
     try {
-      await this.hass.callService('fan', service, { ...data, entity_id: this._config.entity });
+      await this.hass.callService(domain, service, { ...data, entity_id: entityId });
     } catch (error) {
       this._error = error?.message || 'Befehl fehlgeschlagen. Bitte erneut versuchen.';
     } finally { this._pending = false; }
@@ -71,6 +71,13 @@ export class SmartFan2Card extends LitElement {
     const modes = naturalModes(view.presets, this._config);
     const natural = modes.supported && state.attributes.preset_mode === modes.natural;
     const strength = view.percentage <= 33 ? 1 : view.percentage <= 66 ? 2 : 3;
+    const angleEntity = resolveAngleEntity(this.hass, this._config);
+    const angleState = this.hass.states[angleEntity];
+    const angle = Number(angleState?.state);
+    const angleMin = Number(angleState?.attributes?.min);
+    const angleMax = Number(angleState?.attributes?.max);
+    const angleStep = Number(angleState?.attributes?.step);
+    const angleAvailable = !!angleState && !['unknown', 'unavailable', ''].includes(angleState.state) && Number.isFinite(angle) && Number.isFinite(angleMin) && Number.isFinite(angleMax) && angleMax > angleMin;
     const target = this.hass.states[this._config.left_entity];
     const canMoveLeft = !!target && target.state !== 'unavailable' && (!['number', 'select'].includes(this._config.left_entity?.split('.')[0]) || target.state !== 'unknown');
     let canCyclePosition = false;
@@ -117,6 +124,11 @@ export class SmartFan2Card extends LitElement {
                 </g><path d="M20.2 2.7c0-1.2 1-2.2 2.3-2.2 1.4 0 2.7.9 3.1 2.1l-2.8 1.4c-1.4.6-2.6-.1-2.6-1.3Z" fill="currentColor"/>
               </svg>`}</button>
           </div>
+          ${this._config.show_angle_slider ? angleAvailable ? html`<label class="speed angle"><span class="angle-label">Schwenkbereich</span>
+            <input type="range" min=${angleMin} max=${angleMax} step=${angleStep > 0 ? angleStep : 1} .value=${String(angle)} aria-label="Schwenkbereich" ?disabled=${disabled || !view.on}
+              @input=${event => { this.renderRoot.querySelector('.angle output').value = `${event.target.value}°`; }}
+              @change=${event => this._call('set_value', { value: Math.max(angleMin, Math.min(angleMax, Number(event.target.value))) }, 'number', angleEntity)}>
+            <output>${angle}°</output></label>` : html`<p class="hint">Schwenkbereich nicht verfügbar. Winkel-Entität unter „Darstellung“ auswählen.</p>` : nothing}
           ${view.presets.length && !(modes.supported && view.presets.length === 2) ? html`<label class="preset"><ha-icon icon="mdi:tune-variant" aria-hidden="true"></ha-icon><select aria-label="Modus" ?disabled=${disabled || !view.on}
             @change=${event => this._call('set_preset_mode', { preset_mode: event.target.value })}>
               <option value="" ?selected=${!view.presets.includes(state.attributes.preset_mode)} disabled>Modus wählen</option>
@@ -134,9 +146,14 @@ export class SmartFan2Card extends LitElement {
 class SmartFan2CardEditor extends LitElement {
   static properties = { hass: { attribute: false }, _config: { state: true } };
   setConfig(config) { this._config = { ...config }; }
+  _changed(event) {
+    event.stopPropagation();
+    this._config = { ...this._config, ...event.detail.value };
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+  }
   render() {
     if (!this.hass || !this._config) return nothing;
-    return html`<ha-form .hass=${this.hass} .data=${this._config} .schema=${[
+    const fields = [
       { name: 'entity', required: true, selector: { entity: { domain: 'fan' } } },
       { name: 'name', selector: { text: {} } },
       { name: 'subtitle', selector: { text: {} } },
@@ -152,10 +169,27 @@ class SmartFan2CardEditor extends LitElement {
       { name: 'cycling_timeout', selector: { number: { min: 1, max: 120, step: 1, mode: 'box', unit_of_measurement: 's' } } },
       { name: 'left_entity', selector: { entity: { domain: ['button', 'script', 'number', 'select'] } } },
       { name: 'left_value', selector: { text: {} } },
-    ]} .computeLabel=${field => ({ entity: 'Ventilator', name: 'Name', subtitle: 'Untertitel', layout: 'Layout', natural_preset: 'Natural-Modus (optional: exakter Preset-Name)', normal_preset: 'Normal-Modus (optional: exakter Preset-Name)', cycling_mode: 'Cycling: Ablauf', angle_entity: 'Cycling: Schwenkbereich-Entität', position_entity: 'Cycling: tatsächliche Kopfposition (Live-Rückmeldung)', target_angle: 'Cycling: Zielwinkel', cycling_max_angle: 'Cycling: maximaler Schwenkbereich (leer = Entitätsmaximum)', target_tolerance: 'Cycling: Zieltoleranz (Standard 2°)', cycling_timeout: 'Cycling: Zeitlimit (Standard 30 s)', left_entity: 'Cycling: Aktion für ganz links', left_value: 'Cycling: Zielwert für number/select' })[field.name]}
+    ];
+    const modes = naturalModes(fanView(this.hass.states[this._config.entity]).presets);
+    const labels = { entity: 'Ventilator', name: 'Name (optional)', subtitle: 'Untertitel (optional)', layout: 'Layout', show_angle_slider: 'Schwenkbereich-Slider anzeigen', natural_preset: 'Natural-Modus', normal_preset: 'Normal-Modus', cycling_mode: 'Cycling: Ablauf', angle_entity: 'Schwenkbereich-Entität (automatisch erkannt, falls leer)', position_entity: 'Tatsächliche Kopfposition (Live-Rückmeldung)', target_angle: 'Zielwinkel', cycling_max_angle: 'Maximaler Schwenkbereich (leer = Entitätsmaximum)', target_tolerance: 'Zieltoleranz (Standard 2°)', cycling_timeout: 'Zeitlimit (Standard 30 s)', left_entity: 'Aktion für ganz links', left_value: 'Zielwert für number/select' };
+    const form = schema => html`<ha-form .hass=${this.hass} .data=${{ layout: 'compact', ...this._config }} .schema=${schema} .computeLabel=${field => labels[field.name]}
     .computeHelper=${field => field.name === 'position_entity' ? 'Muss sich während der Bewegung ändern. oscillation_angle ist der eingestellte Schwenkbereich und keine Positionsrückmeldung.' : field.name === 'cycling_mode' ? 'Zielwinkel-Steuerung läuft im geöffneten Browser. Für unbeaufsichtigten Betrieb ein Home-Assistant-Script als Links-Aktion verwenden.' : undefined}
-    @value-changed=${event => this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: { ...this._config, ...event.detail.value } }, bubbles: true, composed: true }))}></ha-form>`;
+    @value-changed=${event => this._changed(event)}></ha-form>`;
+    return html`${form(fields.filter(field => ['entity', 'layout'].includes(field.name)))}
+      <p>Name, Geschwindigkeit, Schwenken und Modi werden vom Ventilator übernommen.</p>
+      <details><summary>Darstellung (optional)</summary>${form([
+        ...fields.filter(field => ['name', 'subtitle'].includes(field.name)),
+        { name: 'show_angle_slider', selector: { boolean: {} } },
+        ...(this._config.show_angle_slider ? fields.filter(field => field.name === 'angle_entity') : []),
+      ])}</details>
+      ${!modes.supported ? html`<details><summary>Modi zuordnen (optional)</summary>${form(fields.filter(field => ['natural_preset', 'normal_preset'].includes(field.name)))}</details>` : nothing}
+      <details><summary>Cycling (optional)</summary>${form(fields.filter(field => {
+        if (field.name === 'cycling_mode') return true;
+        if (this._config.cycling_mode === 'position') return ['angle_entity', 'position_entity', 'target_angle', 'cycling_max_angle', 'target_tolerance', 'cycling_timeout'].includes(field.name);
+        return field.name === 'left_entity' || (field.name === 'left_value' && /^(number|select)\./.test(this._config.left_entity || ''));
+      }))}</details>`;
   }
+  static styles = css`p { color: var(--secondary-text-color); font-size: 13px; } details { border-top: 1px solid var(--divider-color); padding: 12px 0; } summary { cursor: pointer; padding: 4px 0; }`;
 }
 
 if (!customElements.get('smart-fan-2-card')) customElements.define('smart-fan-2-card', SmartFan2Card);

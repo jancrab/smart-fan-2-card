@@ -1,7 +1,7 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { Window } from 'happy-dom';
-import { fanView, validateConfig, naturalModes, nextStrength } from '../src/fan.js';
+import { fanView, validateConfig, naturalModes, nextStrength, resolveAngleEntity } from '../src/fan.js';
 
 const window = new Window();
 for (const key of ['window', 'document', 'customElements', 'HTMLElement', 'Element', 'Document', 'CSSStyleSheet', 'ShadowRoot', 'CustomEvent', 'Event']) globalThis[key] = window[key];
@@ -94,11 +94,45 @@ test('editor filters selectable entities to fan domain and emits preserved confi
   await editor.updateComplete;
   const form = editor.shadowRoot.querySelector('ha-form');
   assert.equal(form.schema[0].selector.entity.domain, 'fan');
-  assert.equal(form.schema.find(field => field.name === 'target_angle').selector.number.unit_of_measurement, '°');
-  assert.deepEqual(form.schema.find(field => field.name === 'position_entity').selector.entity.domain, ['sensor', 'number']);
+  assert.deepEqual(form.schema.map(field => field.name), ['entity', 'layout']);
   let result;
   editor.addEventListener('config-changed', event => { result = event.detail.config; });
   form.dispatchEvent(new CustomEvent('value-changed', { detail: { value: { entity: 'fan.other' } } }));
   assert.equal(result.entity, 'fan.other');
   assert.equal(result.layout, 'wide');
+  editor.setConfig({ ...result, cycling_mode: 'position' });
+  await editor.updateComplete;
+  const schemas = [...editor.shadowRoot.querySelectorAll('ha-form')].flatMap(item => item.schema);
+  assert.equal(schemas.find(field => field.name === 'target_angle').selector.number.unit_of_measurement, '°');
+  assert.deepEqual(schemas.find(field => field.name === 'position_entity').selector.entity.domain, ['sensor', 'number']);
+});
+
+test('Xiaomi nature/normal modes override stale mappings and toggle in both directions', async () => {
+  const entity = state();
+  entity.attributes = { ...entity.attributes, supported_features: 63, preset_modes: ['nature', 'normal'], preset_mode: 'nature' };
+  const { card, root, calls } = await fixture(entity, { natural_preset: 'Natural Wind', normal_preset: 'Straight Wind' });
+  assert.equal(root.querySelector('.natural').disabled, false);
+  assert.equal(root.querySelector('.natural').getAttribute('aria-pressed'), 'true');
+  root.querySelector('.natural').click();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(calls[0][2].preset_mode, 'normal');
+  card.hass = { ...card.hass, states: { ...card.hass.states, 'fan.test': { ...entity, attributes: { ...entity.attributes, preset_mode: 'normal' } } } };
+  await card.updateComplete;
+  root.querySelector('.natural').click();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(calls[1][2].preset_mode, 'nature');
+});
+
+test('optional sweep slider discovers the fan angle and targets the number service', async () => {
+  const { card, root, calls } = await fixture(state(), { show_angle_slider: true });
+  card.hass = { ...card.hass, states: { ...card.hass.states, 'number.test_oscillation_angle': { state: '53', attributes: { min: 1, max: 120, step: 1 } } } };
+  await card.updateComplete;
+  const slider = root.querySelector('.angle input');
+  assert.equal(slider.value, '53');
+  assert.equal(slider.max, '120');
+  slider.value = '90';
+  slider.dispatchEvent(new Event('change'));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(calls[0], ['number', 'set_value', { value: 90, entity_id: 'number.test_oscillation_angle' }]);
+  assert.equal(resolveAngleEntity({ states: { 'number.other_oscillation_angle': {} } }, { entity: 'fan.test' }), undefined);
 });

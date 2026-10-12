@@ -41,9 +41,19 @@ export function fanView(state) {
 }
 
 export function naturalModes(presets, config = {}) {
-  const natural = config.natural_preset || presets.find(mode => /natural|nature|natürlich|自然/i.test(mode));
-  const normal = config.normal_preset || presets.find(mode => /normal|straight|direct|standard|直吹/i.test(mode));
+  const natural = presets.includes(config.natural_preset) ? config.natural_preset : presets.find(mode => /natural|nature|natürlich|自然/i.test(mode));
+  const normal = presets.includes(config.normal_preset) ? config.normal_preset : presets.find(mode => /normal|straight|direct|standard|直吹/i.test(mode));
   return { natural, normal, supported: !!natural && !!normal && presets.includes(natural) && presets.includes(normal) };
+}
+
+export function resolveAngleEntity(hass, config) {
+  if (config.angle_entity) return config.angle_entity;
+  const fanDevice = hass.entities?.[config.entity]?.device_id;
+  const candidates = Object.keys(hass.states || {}).filter(id => id.startsWith('number.') && /(?:oscillation|swing)_angle$/.test(id));
+  const related = fanDevice ? candidates.filter(id => hass.entities?.[id]?.device_id === fanDevice) : [];
+  if (related.length === 1) return related[0];
+  const conventional = `number.${config.entity.split('.')[1]}_oscillation_angle`;
+  return candidates.includes(conventional) ? conventional : undefined;
 }
 
 export function nextStrength(percentage) {
