@@ -54,13 +54,18 @@ test('actual buttons send correct fan services and target', async () => {
 test('Cycling stops oscillation before running the left action', async () => {
   const { card, calls } = await fixture(state(), { left_entity: 'script.left' });
   await card._cycleLeft();
-  assert.deepEqual(calls, [['fan', 'oscillate', { entity_id: 'fan.test', oscillating: false }], ['script', 'turn_on', { entity_id: 'script.left' }]]);
+  assert.deepEqual(calls, [
+    ['fan', 'oscillate', { entity_id: 'fan.test', oscillating: false }],
+    ['fan', 'set_preset_mode', { entity_id: 'fan.test', preset_mode: 'Natural Wind' }],
+    ['fan', 'set_percentage', { entity_id: 'fan.test', percentage: 100 }],
+    ['script', 'turn_on', { entity_id: 'script.left' }],
+  ]);
 });
 test('a button with no previous press remains usable', async () => {
   const { card, root, calls } = await fixture(state(), { left_entity: 'button.left' });
   assert.equal(root.querySelector('.cycling').disabled, false);
   await card._cycleLeft();
-  assert.deepEqual(calls[1], ['button', 'press', { entity_id: 'button.left' }]);
+  assert.deepEqual(calls.at(-1), ['button', 'press', { entity_id: 'button.left' }]);
 });
 test('position Cycling is disabled until real feedback is available', async () => {
   const { root } = await fixture(state(), { cycling_mode: 'position', angle_entity: 'number.sweep', position_entity: 'sensor.position', target_angle: -60 });

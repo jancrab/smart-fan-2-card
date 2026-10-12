@@ -67,16 +67,17 @@ export const cardStyles = css`
   output { min-width: 43px; text-align: right; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink); }
   .quick-controls { display: flex; align-items: center; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
   .quick-controls button { flex: 1; }
+  .everyday[aria-pressed=true] { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
   .natural { color: var(--normal); background: color-mix(in srgb, var(--normal) 9%, transparent); }
   .natural.enabled { color: var(--natural); background: color-mix(in srgb, var(--natural) 10%, transparent); }
   .oscillate[aria-pressed=true], .cycling[aria-pressed=true] { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
   .preset { display: flex; align-items: center; gap: 10px; margin-top: 10px; color: var(--muted); }
   select { min-width: 0; width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; color: var(--ink); background: var(--surface); font-size: 12px; }
   .error { margin: 10px 0 0; color: var(--error-color, #b52c35); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
-  ha-card.wide { display: grid; grid-template-columns: minmax(200px, .85fr) minmax(180px, 1.15fr); align-items: center; column-gap: 20px; }
+  ha-card.wide { display: grid; grid-template-columns: minmax(150px, .85fr) minmax(244px, 1.15fr); align-items: center; column-gap: 20px; }
   .wide .error { grid-column: 1/-1; }
   .wide .speed { margin-top: 0; }
-  @container (max-width: 430px) { ha-card.wide { display: block; } .wide .speed { margin-top: 6px; } }
-  @container (max-width: 240px) { .quick-controls { display: grid; grid-template-columns: repeat(2, minmax(44px, 1fr)); } }
+  @container (max-width: 443px) { ha-card.wide { display: block; } .wide .speed { margin-top: 6px; } }
+  @container (max-width: 273px) { .quick-controls { display: grid; grid-template-columns: repeat(3, minmax(44px, 1fr)); } }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } .fan.running ha-icon { animation: none; } }
 `;

@@ -2,7 +2,7 @@
 
 Home-Assistant-Dashboard-Karte für Smartmi Standing Fan 2S / Smart Fan 2 und andere `fan.*`-Entitäten. Der visuelle Editor bietet alle Fan-Entitäten zur Auswahl an. Name und unterstützte Funktionen werden aus der ausgewählten Entität übernommen.
 
-Aktuelle Version: **0.5.0**. Vereinfachter Editor mit automatischer Übernahme der Fan-Eigenschaften und optionalem Schwenkbereich-Slider.
+Aktuelle Version: **0.6.0**. Vereinfachter Editor mit automatischer Übernahme der Fan-Eigenschaften und optionalem Schwenkbereich-Slider.
 
 ![Schmales und breites Layout im Dark Mode](docs/dark-preview.png)
 
@@ -27,7 +27,7 @@ Offizielle Anleitungen: [Allgemeine Anforderungen](https://hacs.xyz/docs/publish
 ### Manuelle Installation
 
 1. `dist/smart-fan-2-card.js` nach `/config/www/smart-fan-2-card.js` kopieren.
-2. Unter Einstellungen → Dashboards → Ressourcen die URL `/local/smart-fan-2-card.js?v=0.5.0` als **JavaScript-Modul** hinzufügen (erweiterter Modus ggf. aktivieren).
+2. Unter Einstellungen → Dashboards → Ressourcen die URL `/local/smart-fan-2-card.js?v=0.6.0` als **JavaScript-Modul** hinzufügen (erweiterter Modus ggf. aktivieren).
 3. Browser vollständig neu laden, dann Dashboard bearbeiten → Karte hinzufügen → **Smart Fan 2 Card** → Fan-Entität und Layout auswählen.
 
 Bei einem Update die Datei ersetzen und die bestehende Ressourcen-URL mit einem neuen `?v=…`-Wert aktualisieren, damit der Browser die neue Datei lädt. Keine zweite Ressource für dieselbe Karte anlegen. Ein Home-Assistant-Neustart ist dafür nicht erforderlich.
@@ -44,6 +44,24 @@ Der Button öffnet das Repository in HACS deiner Home-Assistant-Instanz; dort be
 4. Die Karte im Dashboard hinzufügen. Keine Aufnahme in den HACS-Standardkatalog erforderlich.
 
 ## Konfiguration
+
+### Alltags- und Cycling-Profil
+
+Die Sofa-Taste neben Cycling aktiviert standardmäßig **Natural, 66 % und Oszillation mit 30° Schwenkbereich**. Sie schaltet den Lüfter bei Bedarf ein. Preset, Leistung und Schwenkbereich stehen im Editor unter **Alltagsprofil**. Cycling setzt standardmäßig **Natural und 100 %** und führt danach den konfigurierten Positionierungsablauf aus; Preset und Leistung stehen unter **Cycling**.
+
+```yaml
+everyday_preset: nature # oder normal; wird auf den echten Fan-Preset abgebildet
+everyday_percentage: 66
+everyday_angle: 30 # Grad, kein Prozentwert
+cycling_preset: nature # oder normal
+cycling_percentage: 100
+```
+
+Die Profilbefehle laufen der Reihe nach. Fehlt beim Alltagsprofil ein gültiger Schwenkbereich, startet die Taste keine Befehle. Bei einem Fehler wird der Ablauf abgebrochen; bereits gesetzte Werte werden nicht zurückgesetzt. Die Sofa-Taste wird nur aktiv markiert, wenn die zurückgemeldeten Fan- und Winkelwerte zum Profil passen.
+
+Eine feste Kopfposition benötigt eine passende Geräteaktion oder echte Positionsrückmeldung. Die bislang gemeldete Winkel-Entität stellt nur den Schwenkbereich ein. [Script-Vorlage, Einrichtung und Prüfung der erreichbaren Funktion](docs/cycling-script.md) sind auch im Editor verlinkt. Ohne passende Rückmeldung/Aktion bleibt die Positionierung gesperrt.
+
+### Grundeinstellungen
 
 Im visuellen Editor reichen **Ventilator** und **Layout**. Name, Funktionen und Modi kommen aus der Fan-Entität. Unter **Darstellung (optional)** können Name/Untertitel überschrieben und der Schwenkbereich-Slider aktiviert werden. Cycling liegt in einem getrennten optionalen Bereich; dort werden nur die Felder des ausgewählten Ablaufs angezeigt. Manuelle Moduszuordnung erscheint nur, wenn die Presets nicht automatisch erkannt werden.
 
@@ -110,11 +128,11 @@ Vorschauen bei laufendem Dev-Server:
 
 Beide zeigen die echte gebaute Karte mit simulierten Geräten und senden keine Gerätebefehle. Die Dark-Mode-Vorschau setzt Home-Assistant-Theme-Variablen. Nach Änderungen zuerst `npm run build` ausführen. `dist/` wird mit versioniert, sodass HACS die einzelne gebündelte Datei direkt findet. Keine CDN-Abhängigkeiten zur Laufzeit.
 
-CI prüft Tests, Build und Übereinstimmung von Quellcode/Distribution. Die HACS-Validierung läuft für das öffentliche Repository zusätzlich. Ein Tag `v<package.json-Version>` baut und testet erneut und erstellt ein GitHub-Release mit JavaScript-Asset. Vor dem nächsten Release Paketversion, Lockdatei und Changelog aktualisieren, neu bauen und einen neuen Tag verwenden. Aktueller Teststand: Build und alle 20 Tests erfolgreich; ein Test am echten Gerät steht aus.
+CI prüft Tests, Build und Übereinstimmung von Quellcode/Distribution. Die HACS-Validierung läuft für das öffentliche Repository zusätzlich. Ein Tag `v<package.json-Version>` baut und testet erneut und erstellt ein GitHub-Release mit JavaScript-Asset. Vor dem nächsten Release Paketversion, Lockdatei und Changelog aktualisieren, neu bauen und einen neuen Tag verwenden. Aktueller Teststand: Build und alle 23 Tests erfolgreich; ein Test am echten Gerät steht aus.
 
 ## Gestaltung
 
-Kompakte Home-Assistant-Gerätekarte mit Gerätename, Zustand, Geschwindigkeitsregler und einer Reihe aus vier Icon-Tasten: Normal/Natural, Stärke, Schwenken, Cycling. Das Fan-Symbol schaltet direkt ein/aus und rotiert im Betrieb; ein separater Power-Button entfällt. Die schmale Vorschau ist 280 px breit, die breite Ansicht nutzt zwei Spalten und passt sich per Container Query an ihren tatsächlichen Platz an. Alle Tasten haben mindestens 44 × 44 px Bedienfläche, zugängliche Namen, Tooltips und sichtbaren Tastaturfokus. Ein zusätzliches Modusmenü erscheint nur bei weiteren Presets. Der Gerätename öffnet die Details.
+Kompakte Home-Assistant-Gerätekarte mit Gerätename, Zustand, Geschwindigkeitsregler und einer Reihe aus fünf Icon-Tasten: Normal/Natural, Stärke, Schwenken, Alltag, Cycling. Das Fan-Symbol schaltet direkt ein/aus und rotiert im Betrieb; ein separater Power-Button entfällt. Die schmale Vorschau ist 280 px breit, die breite Ansicht nutzt zwei Spalten und passt sich per Container Query an ihren tatsächlichen Platz an. Alle Tasten haben mindestens 44 × 44 px Bedienfläche, zugängliche Namen, Tooltips und sichtbaren Tastaturfokus. Ein zusätzliches Modusmenü erscheint nur bei weiteren Presets. Der Gerätename öffnet die Details.
 
 Die Karte verwendet `ha-card` und `ha-icon` sowie eigene HTML-Bedienelemente. Hintergrund, Flächen, Text, Akzent, Rahmen, Radius und Schatten übernehmen Home-Assistant-Theme-Variablen und reagieren auf Theme-Wechsel. Normal und Natural haben eigene blaue beziehungsweise grüne Standardfarben, die im Theme überschrieben werden können. Die Demo definiert hierfür hellere Dark-Mode-Farben; das ist keine automatische Änderung der Standardfarben in Home Assistant.
 

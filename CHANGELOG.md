@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0
+
+- Neue Alltagsprofil-Taste neben Cycling: standardmäßig Natural, 66 % und Oszillation mit 30° Schwenkbereich.
+- Alltagsprofil mit Modus, Leistung und Schwenkbereich im Editor konfigurierbar; Cycling mit Modus und Leistung, standardmäßig Natural/100 %.
+- Cycling setzt sein Profil vor dem konfigurierten Positionierungsablauf.
+- Script-Blueprint und verlinkte Anleitung für serverseitiges Positionieren mit echter Live-Positionsrückmeldung ergänzt. Der Schwenkbereich ist weiterhin keine Positionsrückmeldung.
+- Reihenfolge und Fehlerfälle der Profilbefehle getestet; aktive Alltagsmarkierung folgt den tatsächlichen Zuständen.
+
+Build und alle 23 Tests erfolgreich. Eine absolute Kopfposition ist mit den bisher gemeldeten Geräteentitäten nicht nachweisbar; Blueprint und echte Gerätebewegung sind noch nicht in Home Assistant getestet.
+
 ## 0.5.0
 
 - Editor zeigt zunächst nur Ventilator und Layout; Darstellung, manuelle Moduszuordnung und Cycling liegen in optionalen Bereichen.
