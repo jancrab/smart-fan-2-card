@@ -149,3 +149,25 @@ test('optional sweep slider discovers the fan angle and targets the number servi
   assert.equal(calls.length, 1, 'visibility changes must not send commands');
   assert.equal(resolveAngleEntity({ states: { 'number.other_oscillation_angle': {} } }, { entity: 'fan.test' }), undefined);
 });
+
+test('editor factory loads native HA form before returning an editor on a fresh dashboard', async () => {
+  assert.equal(customElements.get('ha-form'), undefined);
+  let loads = 0;
+  window.loadCardHelpers = async () => ({
+    createCardElement: config => {
+      assert.deepEqual(config, { type: 'entities', entities: [] });
+      return { constructor: { getConfigElement: async () => {
+        loads++;
+        await Promise.resolve();
+        customElements.define('ha-form', class extends HTMLElement {});
+      } } };
+    },
+  });
+  const Card = customElements.get('smart-fan-2-card');
+  const editor = await Card.getConfigElement();
+  assert.ok(customElements.get('ha-form'), 'ha-form must be registered before the custom editor opens');
+  assert.equal(editor.localName, 'smart-fan-2-card-editor');
+  await Card.getConfigElement();
+  assert.equal(loads, 1, 'already loaded HA components must be reused');
+  delete window.loadCardHelpers;
+});

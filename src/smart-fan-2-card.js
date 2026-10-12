@@ -18,7 +18,15 @@ export class SmartFan2Card extends LitElement {
   static getStubConfig(hass) {
     return { entity: Object.keys(hass?.states || {}).find(id => id.startsWith('fan.')) || 'fan.smart_fan_2' };
   }
-  static getConfigElement() { return document.createElement('smart-fan-2-card-editor'); }
+  static async getConfigElement() {
+    if (!customElements.get('ha-form')) {
+      // Native form/selector components are lazy-loaded by HA's built-in editor.
+      const helpers = await window.loadCardHelpers();
+      const nativeCard = helpers.createCardElement({ type: 'entities', entities: [] });
+      await nativeCard.constructor.getConfigElement();
+    }
+    return document.createElement('smart-fan-2-card-editor');
+  }
   getCardSize() { return this._config?.layout === 'wide' ? 3 : 4; }
   getGridOptions() { return { columns: this._config?.layout === 'wide' ? 12 : 6, min_columns: 6 }; }
 

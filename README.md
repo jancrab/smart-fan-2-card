@@ -2,7 +2,7 @@
 
 Home-Assistant-Dashboard-Karte für Smartmi Standing Fan 2S / Smart Fan 2 und andere `fan.*`-Entitäten. Der visuelle Editor bietet alle Fan-Entitäten zur Auswahl an. Name und unterstützte Funktionen werden aus der ausgewählten Entität übernommen.
 
-Aktuelle Version: **0.6.1**. Vereinfachter Editor mit automatischer Übernahme der Fan-Eigenschaften und optionalem Schwenkbereich-Slider.
+Aktuelle Version: **0.6.2**. Vereinfachter Editor mit automatischer Übernahme der Fan-Eigenschaften und optionalem Schwenkbereich-Slider.
 
 ![Schmales und breites Layout im Dark Mode](docs/dark-preview.png)
 
@@ -27,7 +27,7 @@ Offizielle Anleitungen: [Allgemeine Anforderungen](https://hacs.xyz/docs/publish
 ### Manuelle Installation
 
 1. `dist/smart-fan-2-card.js` nach `/config/www/smart-fan-2-card.js` kopieren.
-2. Unter Einstellungen → Dashboards → Ressourcen die URL `/local/smart-fan-2-card.js?v=0.6.1` als **JavaScript-Modul** hinzufügen (erweiterter Modus ggf. aktivieren).
+2. Unter Einstellungen → Dashboards → Ressourcen die URL `/local/smart-fan-2-card.js?v=0.6.2` als **JavaScript-Modul** hinzufügen (erweiterter Modus ggf. aktivieren).
 3. Browser vollständig neu laden, dann Dashboard bearbeiten → Karte hinzufügen → **Smart Fan 2 Card** → Fan-Entität und Layout auswählen.
 
 Bei einem Update die Datei ersetzen und die bestehende Ressourcen-URL mit einem neuen `?v=…`-Wert aktualisieren, damit der Browser die neue Datei lädt. Keine zweite Ressource für dieselbe Karte anlegen. Ein Home-Assistant-Neustart ist dafür nicht erforderlich.
@@ -128,7 +128,7 @@ Vorschauen bei laufendem Dev-Server:
 
 Beide zeigen die echte gebaute Karte mit simulierten Geräten und senden keine Gerätebefehle. Die Dark-Mode-Vorschau setzt Home-Assistant-Theme-Variablen. Nach Änderungen zuerst `npm run build` ausführen. `dist/` wird mit versioniert, sodass HACS die einzelne gebündelte Datei direkt findet. Keine CDN-Abhängigkeiten zur Laufzeit.
 
-CI prüft Tests, Build und Übereinstimmung von Quellcode/Distribution. Die HACS-Validierung läuft für das öffentliche Repository zusätzlich. Ein Tag `v<package.json-Version>` baut und testet erneut und erstellt ein GitHub-Release mit JavaScript-Asset. Vor dem nächsten Release Paketversion, Lockdatei und Changelog aktualisieren, neu bauen und einen neuen Tag verwenden. Aktueller Teststand: Build und alle 23 Tests erfolgreich; ein Test am echten Gerät steht aus.
+CI prüft Tests, Build und Übereinstimmung von Quellcode/Distribution. Die HACS-Validierung läuft für das öffentliche Repository zusätzlich. Ein Tag `v<package.json-Version>` baut und testet erneut und erstellt ein GitHub-Release mit JavaScript-Asset. Vor dem nächsten Release Paketversion, Lockdatei und Changelog aktualisieren, neu bauen und einen neuen Tag verwenden. Aktueller Teststand: Build und alle 24 Tests erfolgreich; ein Test am echten Gerät steht aus.
 
 ## Gestaltung
 

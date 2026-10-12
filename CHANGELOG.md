@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.2
+
+- Karteneditor lädt Home Assistants native Formular- und Selector-Komponenten vor dem Öffnen. Auf einem frisch geladenen Dashboard konnte `ha-form` bisher noch unregistriert sein, sodass die Auswahlfelder nicht funktionierten.
+- Regressionstest für den ersten Editor-Aufruf und die Wiederverwendung bereits geladener Komponenten ergänzt. Der Test schlägt ohne den Fix fehl.
+- Build und alle 24 Tests erfolgreich. Noch keine direkte Prüfung im betroffenen Home-Assistant-Dashboard.
+
 ## 0.6.1
 
 - Optionaler Schwenkbereich-Slider erscheint nur bei eingeschaltetem Ventilator und aktiver Oszillation.
