@@ -1,0 +1,71 @@
+# Import both blueprints first. Add these entries to scripts.yaml; preserve
+# existing scripts. Check blueprint paths under Settings > Automations & scenes
+# > Blueprints if your installation stored them under a different directory.
+smart_fan_widget_controller:
+  alias: Smart Fan - Widget controller
+  use_blueprint:
+    path: jancrab/fan_widget_controller.yaml
+    input:
+      fan_entity: fan.smartmi_standing_fan_2s
+      angle_entity: number.smartmi_standing_fan_2s_oscillation_angle
+      everyday_preset: nature
+      everyday_percentage: 66
+      everyday_angle: 30
+      cycling_preset: nature
+      cycling_percentage: 100
+      natural_preset: nature
+      normal_preset: normal
+
+smart_fan_widget_power:
+  alias: Fan - Power
+  icon: mdi:power
+  use_blueprint:
+    path: jancrab/fan_widget_button.yaml
+    input:
+      controller: script.smart_fan_widget_controller
+      operation: power
+
+smart_fan_widget_everyday:
+  alias: Fan - Everyday
+  icon: mdi:sofa-outline
+  use_blueprint:
+    path: jancrab/fan_widget_button.yaml
+    input:
+      controller: script.smart_fan_widget_controller
+      operation: everyday
+
+smart_fan_widget_set:
+  alias: Fan - Set
+  icon: mdi:crosshairs
+  use_blueprint:
+    path: jancrab/fan_widget_button.yaml
+    input:
+      controller: script.smart_fan_widget_controller
+      operation: cycling_set
+
+smart_fan_widget_lock:
+  alias: Fan - Lock
+  icon: mdi:lock-outline
+  use_blueprint:
+    path: jancrab/fan_widget_button.yaml
+    input:
+      controller: script.smart_fan_widget_controller
+      operation: cycling_lock
+
+smart_fan_widget_strength:
+  alias: Fan - Strength
+  icon: mdi:numeric-3-circle-outline
+  use_blueprint:
+    path: jancrab/fan_widget_button.yaml
+    input:
+      controller: script.smart_fan_widget_controller
+      operation: strength
+
+smart_fan_widget_natural:
+  alias: Fan - Natural
+  icon: mdi:leaf
+  use_blueprint:
+    path: jancrab/fan_widget_button.yaml
+    input:
+      controller: script.smart_fan_widget_controller
+      operation: natural

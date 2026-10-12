@@ -2,7 +2,7 @@
 
 A Home Assistant dashboard card for Smartmi Standing Fan 2S / Smart Fan 2 and compatible `fan.*` entities. Select a fan and a layout; the card reads its name, supported controls and modes automatically.
 
-Current version: **0.8.0**.
+Current version: **0.9.0**.
 
 ![Compact and wide layouts in dark mode](docs/dark-preview.png)
 
@@ -30,7 +30,7 @@ See the [HACS custom repository guide](https://hacs.dev/docs/faq/custom_reposito
 ### Manual installation
 
 1. Copy `dist/smart-fan-2-card.js` to `/config/www/smart-fan-2-card.js`.
-2. Under Settings → Dashboards → Resources, add `/local/smart-fan-2-card.js?v=0.8.0` as a **JavaScript module**. Enable advanced mode if needed.
+2. Under Settings → Dashboards → Resources, add `/local/smart-fan-2-card.js?v=0.9.0` as a **JavaScript module**. Enable advanced mode if needed.
 3. Reload the browser and add the card.
 
 For updates, replace the file and change the version query on the existing resource. Do not add duplicate resources. A Home Assistant restart is not required.
@@ -75,6 +75,17 @@ Older `cycling_mode`, `position_entity`, `target_angle`, `target_tolerance`, `cy
 
 The angle slider inherits the entity's min/max/step and calls `number.set_value`. It does not turn oscillation on automatically. Everyday restores its configured sweep width after Cycling.
 
+## iOS Home Screen widget
+
+Use the official Home Assistant app's Custom Widget with server-side scripts for
+**Power, Everyday, Set, Lock, Strength and Natural / Normal**. The shared controller
+keeps widget profiles in one place; separate Set and Lock buttons avoid relying
+on iOS state refresh timing. No position sensor or separate iOS app is needed.
+
+[Import blueprints and follow the iPhone setup guide](docs/ios-widget.md).
+The widget requires a one-time setup in the Companion app. HACS installs the
+frontend card; it does not install these scripts or add the iPhone widget.
+
 ## Themes and accessibility
 
 The card uses `ha-card`, `ha-icon` and Home Assistant CSS theme variables for background, text, borders, radius and shadows. Normal and Natural colors can be overridden in your theme:
@@ -93,6 +104,13 @@ Controls have at least 44 × 44 px touch targets, accessible names and visible k
 npm ci
 npm run check
 npm run dev
+```
+
+Blueprint tests (Python 3):
+
+```sh
+python -m pip install -r requirements-test.txt
+python -m unittest discover -s test -p "test_*.py"
 ```
 
 Open the [light preview](http://127.0.0.1:4173/) or [dark preview](http://127.0.0.1:4173/demo/dark.html). Both load the real built card with simulated devices and send no commands to Home Assistant. Rebuild after editing source files. The demo uses [Material Design Icons](docs/MDI-LICENSE); the installed card uses Home Assistant's icon components.

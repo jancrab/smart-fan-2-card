@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.0
+
+- Add script blueprints for the Home Assistant iOS Companion app widget: Power, Everyday, Set, Lock, Strength and Natural / Normal.
+- Configure one shared server-side controller per fan. Lock stops first and interrupts unfinished controller sequences; sweep feedback is not required.
+- Include blueprint import buttons, a complete scripts YAML example and English iPhone setup instructions.
+- Add eight tests that render the shipped YAML/Jinja branches, checking defaults, profile overrides, maximum sweep, command ordering and failure paths.
+- Widget profiles are configured separately from the dashboard card. iOS state is not real-time; Lock applies a profile without enforcing a global UI lock.
+- Actual Home Assistant blueprint import and iPhone/device testing remain outstanding.
+
 ## 0.8.0
 
 - Replace position feedback/scripts with manual Cycling Set / Lock. Set applies the configurable profile and starts maximum sweep; Lock stops first and reapplies the profile.

@@ -1,0 +1,191 @@
+blueprint:
+  name: Smart Fan - Widget controller
+  description: >-
+    Shared controller for Home Assistant iOS widget buttons. Create one controller
+    per fan, then use the Widget button blueprint to expose individual actions.
+    Restart mode lets Lock cancel a Set sequence that is still starting.
+    Sweep angle means sweep width, not measured head position.
+  domain: script
+  source_url: https://github.com/jancrab/smart-fan-2-card/blob/main/blueprints/script/fan_widget_controller.yaml
+  input:
+    fan_entity:
+      name: Fan
+      selector:
+        entity:
+          domain: fan
+    angle_entity:
+      name: Sweep angle entity
+      description: Select the oscillation_angle number, not a position sensor.
+      selector:
+        entity:
+          domain: number
+    everyday_preset:
+      name: Everyday mode
+      default: nature
+      selector:
+        select:
+          options:
+            - {value: nature, label: Natural}
+            - {value: normal, label: Normal}
+    everyday_percentage:
+      name: Everyday speed
+      default: 66
+      selector:
+        number: {min: 1, max: 100, step: 1, unit_of_measurement: "%", mode: slider}
+    everyday_angle:
+      name: Everyday sweep angle
+      default: 30
+      selector:
+        number: {min: 1, max: 360, step: 1, unit_of_measurement: "°", mode: box}
+    cycling_preset:
+      name: Cycling mode
+      default: nature
+      selector:
+        select:
+          options:
+            - {value: nature, label: Natural}
+            - {value: normal, label: Normal}
+    cycling_percentage:
+      name: Cycling speed
+      default: 100
+      selector:
+        number: {min: 1, max: 100, step: 1, unit_of_measurement: "%", mode: slider}
+    natural_preset:
+      name: Exact Natural preset name
+      description: Must match a value in the fan's preset_modes. Smartmi uses nature.
+      default: nature
+      selector:
+        text: {}
+    normal_preset:
+      name: Exact Normal preset name
+      default: normal
+      selector:
+        text: {}
+
+mode: restart
+fields:
+  operation:
+    name: Operation
+    required: true
+    selector:
+      select:
+        options: [power, everyday, cycling_set, cycling_lock, strength, natural]
+variables:
+  fan: !input fan_entity
+  sweep: !input angle_entity
+  everyday_mode: !input everyday_preset
+  everyday_speed: !input everyday_percentage
+  everyday_width: !input everyday_angle
+  cycling_mode: !input cycling_preset
+  cycling_speed: !input cycling_percentage
+  natural_name: !input natural_preset
+  normal_name: !input normal_preset
+sequence:
+  - if: "{{ operation | default('') not in ['power', 'everyday', 'cycling_set', 'cycling_lock', 'strength', 'natural'] }}"
+    then:
+      - stop: Unsupported widget operation.
+        error: true
+  - if: "{{ states(fan) not in ['on', 'off'] }}"
+    then:
+      - stop: Fan is unavailable.
+        error: true
+  - choose:
+      - conditions: "{{ operation == 'power' }}"
+        sequence:
+          - action: fan.toggle
+            target:
+              entity_id: "{{ fan }}"
+      - conditions: "{{ operation == 'strength' }}"
+        sequence:
+          - action: fan.set_percentage
+            target:
+              entity_id: "{{ fan }}"
+            data:
+              percentage: >-
+                {% set speed = state_attr(fan, 'percentage') | float(0) %}
+                {{ 33 if speed < 33 else 66 if speed < 66 else 100 if speed < 100 else 33 }}
+      - conditions: "{{ operation == 'natural' }}"
+        sequence:
+          - if: "{{ natural_name not in (state_attr(fan, 'preset_modes') or []) or normal_name not in (state_attr(fan, 'preset_modes') or []) }}"
+            then:
+              - stop: Configure exact Natural and Normal preset names.
+                error: true
+          - action: fan.set_preset_mode
+            target:
+              entity_id: "{{ fan }}"
+            data:
+              preset_mode: "{{ normal_name if state_attr(fan, 'preset_mode') == natural_name else natural_name }}"
+          - action: homeassistant.update_entity
+            target:
+              entity_id: "{{ fan }}"
+    default:
+      # Lock must stop before profile validation, polling or any other command.
+      - if: "{{ operation == 'cycling_lock' }}"
+        then:
+          - action: fan.oscillate
+            target:
+              entity_id: "{{ fan }}"
+            data:
+              oscillating: false
+      - variables:
+          selected_mode: "{{ everyday_mode if operation == 'everyday' else cycling_mode }}"
+          selected_speed: "{{ everyday_speed if operation == 'everyday' else cycling_speed }}"
+          selected_width: "{{ everyday_width if operation == 'everyday' else state_attr(sweep, 'max') }}"
+      - variables:
+          preset: "{{ natural_name if selected_mode == 'nature' else normal_name }}"
+      - if: "{{ selected_mode not in ['nature', 'normal'] or preset not in (state_attr(fan, 'preset_modes') or []) or not is_number(selected_speed) or selected_speed | float(0) < 1 or selected_speed | float(0) > 100 }}"
+        then:
+          - stop: Profile requires a supported preset and speed between 1 and 100%.
+            error: true
+      - if: "{{ operation != 'cycling_lock' }}"
+        then:
+          - if: >-
+              {% set minimum = state_attr(sweep, 'min') %}
+              {% set maximum = state_attr(sweep, 'max') %}
+              {% set step = state_attr(sweep, 'step') | float(1) %}
+              {% set offset = ((selected_width | float(0)) - (minimum | float(0))) / (step if step > 0 else 1) %}
+              {{ not is_number(states(sweep)) or not is_number(minimum) or not is_number(maximum)
+                 or not is_number(selected_width) or selected_width | float(0) < minimum | float(0)
+                 or selected_width | float(0) > maximum | float(0)
+                 or maximum | float(0) <= minimum | float(0)
+                 or (offset - (offset | round)) | abs > 0.000001 }}
+            then:
+              - stop: Select an available sweep entity and an angle within its limits and step.
+                error: true
+      - if: "{{ is_state(fan, 'off') }}"
+        then:
+          - action: fan.turn_on
+            target:
+              entity_id: "{{ fan }}"
+      - if: "{{ operation != 'cycling_lock' }}"
+        then:
+          - action: fan.oscillate
+            target:
+              entity_id: "{{ fan }}"
+            data:
+              oscillating: false
+      - action: fan.set_preset_mode
+        target:
+          entity_id: "{{ fan }}"
+        data:
+          preset_mode: "{{ preset }}"
+      - action: homeassistant.update_entity
+        target:
+          entity_id: "{{ fan }}"
+      - action: fan.set_percentage
+        target:
+          entity_id: "{{ fan }}"
+        data:
+          percentage: "{{ selected_speed }}"
+      - if: "{{ operation != 'cycling_lock' }}"
+        then:
+          - action: number.set_value
+            target:
+              entity_id: "{{ sweep }}"
+            data:
+              value: "{{ selected_width }}"
+          - action: fan.oscillate
+            target:
+              entity_id: "{{ fan }}"
+            data:
+              oscillating: true
