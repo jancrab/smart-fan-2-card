@@ -1,9 +1,8 @@
 import { LitElement, html, nothing, css } from 'lit';
 import { cardStyles } from './styles.js';
-import { fanView, validateConfig, naturalModes, nextStrength, leftAction, resolveAngleEntity } from './fan.js';
-import { cyclingSettings, runPositionCycle } from './cycling.js';
+import { fanView, validateConfig, naturalModes, nextStrength, resolveAngleEntity } from './fan.js';
+import { cyclingSettings } from './cycling.js';
 import { profileSettings, applyFanProfile } from './profiles.js';
-import { createPositionScript, positionScript } from './script-setup.js';
 
 export class SmartFan2Card extends LitElement {
   static properties = {
@@ -12,10 +11,13 @@ export class SmartFan2Card extends LitElement {
     _pending: { state: true },
     _error: { state: true },
     _cycling: { state: true },
+    _locked: { state: true },
   };
 
-  setConfig(config) { this._cycleAbort?.abort(); this._config = validateConfig(config); }
-  disconnectedCallback() { this._cycleAbort?.abort(); super.disconnectedCallback(); }
+  setConfig(config) {
+    if (this._config?.entity !== config?.entity) { this._cycling = false; this._locked = false; }
+    this._config = validateConfig(config);
+  }
   static getStubConfig(hass) {
     return { entity: Object.keys(hass?.states || {}).find(id => id.startsWith('fan.')) || 'fan.smart_fan_2' };
   }
@@ -32,45 +34,37 @@ export class SmartFan2Card extends LitElement {
   getGridOptions() { return { columns: this._config?.layout === 'wide' ? 12 : 6, min_columns: 6 }; }
 
   async _cycleLeft() {
-    if (this._cycling) { this._cycleAbort?.abort(); return; }
-    if (this._config.cycling_mode === 'position') {
-      const view = fanView(this.hass?.states[this._config.entity]);
-      if (this._pending || !view.available || !view.oscillate) return;
-      this._cycleAbort = new AbortController();
-      this._cycling = true;
-      this._pending = true;
-      this._error = '';
-      const config = { ...this._config };
-      try {
-        cyclingSettings(this.hass, config);
-        await applyFanProfile(this.hass, config, 'cycling', this._cycleAbort.signal);
-        await runPositionCycle(() => this.hass, config, this._cycleAbort.signal);
-      }
-      catch (error) { this._error = error?.message || 'Cycling fehlgeschlagen.'; }
-      finally { this._cycling = false; this._pending = false; }
-      return;
-    }
-    const action = leftAction(this._config);
     const view = fanView(this.hass?.states[this._config.entity]);
-    const target = this.hass?.states[this._config.left_entity];
-    if (!action || !view.available || !view.oscillate || !target || target.state === 'unavailable' || (['number', 'select'].includes(action.domain) && target.state === 'unknown') || this._pending) return;
+    if (this._pending || !view.available || !view.oscillate) return;
+    const locking = !!this._cycling;
     this._pending = true;
     this._error = '';
     try {
-      // Stop the automatic sweep before moving the physical head.
-      await applyFanProfile(this.hass, this._config, 'cycling');
-      await this.hass.callService(action.domain, action.service, action.data);
-    } catch (error) {
-      this._error = error?.message || 'Linksbewegung fehlgeschlagen.';
-    } finally { this._pending = false; }
+      if (locking) {
+        // Stop immediately, before applying or refreshing the profile.
+        await this.hass.callService('fan', 'oscillate', { entity_id: this._config.entity, oscillating: false });
+        this._cycling = false;
+        await applyFanProfile(this.hass, this._config, 'cycling');
+        this._locked = true;
+      } else {
+        const settings = cyclingSettings(this.hass, this._config);
+        profileSettings(this.hass, this._config, 'cycling');
+        this._locked = false;
+        await applyFanProfile(this.hass, this._config, 'cycling');
+        await this.hass.callService('number', 'set_value', { entity_id: settings.angleEntity, value: settings.maximum });
+        await this.hass.callService('fan', 'oscillate', { entity_id: this._config.entity, oscillating: true });
+        this._cycling = true;
+      }
+    } catch (error) { this._error = error?.message || 'Cycling failed. Please try again.'; }
+    finally { this._pending = false; }
   }
 
   async _everyday() {
     if (this._pending) return;
     this._pending = true;
     this._error = '';
-    try { await applyFanProfile(this.hass, this._config, 'everyday'); }
-    catch (error) { this._error = error?.message || 'Alltagsprofil fehlgeschlagen.'; }
+    try { await applyFanProfile(this.hass, this._config, 'everyday'); this._locked = false; this._cycling = false; }
+    catch (error) { this._error = error?.message || 'Everyday profile failed.'; }
     finally { this._pending = false; }
   }
 
@@ -81,11 +75,12 @@ export class SmartFan2Card extends LitElement {
     this._error = '';
     try {
       await this.hass.callService(domain, service, { ...data, entity_id: entityId });
+      if (service === 'turn_off' || service === 'oscillate') { this._locked = false; this._cycling = false; }
       if (domain === 'fan' && service === 'set_preset_mode') {
         await this.hass.callService('homeassistant', 'update_entity', { entity_id: entityId });
       }
     } catch (error) {
-      this._error = error?.message || 'Befehl fehlgeschlagen. Bitte erneut versuchen.';
+      this._error = error?.message || 'Command failed. Please try again.';
     } finally { this._pending = false; }
   }
 
@@ -104,64 +99,57 @@ export class SmartFan2Card extends LitElement {
     const angleMax = Number(angleState?.attributes?.max);
     const angleStep = Number(angleState?.attributes?.step);
     const angleAvailable = !!angleState && !['unknown', 'unavailable', ''].includes(angleState.state) && Number.isFinite(angle) && Number.isFinite(angleMin) && Number.isFinite(angleMax) && angleMax > angleMin;
-    const target = this.hass.states[this._config.left_entity];
-    const canMoveLeft = !!target && target.state !== 'unavailable' && (!['number', 'select'].includes(this._config.left_entity?.split('.')[0]) || target.state !== 'unknown');
-    let canCyclePosition = false;
-    if (this._config.cycling_mode === 'position') {
-      try { cyclingSettings(this.hass, this._config); canCyclePosition = true; } catch { /* Missing feedback keeps the button disabled. */ }
-    }
-    const canCycle = this._config.cycling_mode === 'position' ? canCyclePosition : canMoveLeft;
+    let canCycle = false;
+    try { cyclingSettings(this.hass, this._config); profileSettings(this.hass, this._config, 'cycling'); canCycle = true; } catch { /* Unavailable sweep or profile. */ }
+    let cyclingProfile;
+    try { cyclingProfile = profileSettings(this.hass, this._config, 'cycling'); } catch { /* Unsupported profile. */ }
+    const locked = !!this._locked && !!cyclingProfile && view.on && state.attributes.oscillating === false && state.attributes.preset_mode === cyclingProfile.mode && Math.abs(view.percentage - cyclingProfile.percentage) < 1;
+    const profileDisabled = disabled || locked;
     let everydayProfile;
     try { everydayProfile = profileSettings(this.hass, this._config, 'everyday'); } catch { /* Missing capabilities disable the profile. */ }
     const everydayActive = !!everydayProfile && view.on && state.attributes.preset_mode === everydayProfile.mode && Math.abs(view.percentage - everydayProfile.percentage) < 1 && state.attributes.oscillating === true && angle === everydayProfile.angle;
-    const status = !state ? 'Entität nicht gefunden' : !view.available ? 'Nicht verfügbar' : view.on ? 'Läuft' : 'Aus';
+    const status = !state ? 'Entity not found' : !view.available ? 'Unavailable' : view.on ? 'Running' : 'Off';
     const moreInfo = () => this.dispatchEvent(new CustomEvent('hass-more-info', { detail: { entityId: this._config.entity }, bubbles: true, composed: true }));
-    const cyclingLabel = this._cycling ? 'Cycling stoppen' : this._config.cycling_mode === 'position' ? `Cycling: bis ${this._config.target_angle}° schwenken` : 'Cycling: ganz nach links';
+    const cyclingLabel = this._cycling ? 'Lock: stop at the current position' : 'Set: start maximum sweep with the Cycling profile';
     return html`
       <ha-card class=${this._config.layout} aria-busy=${!!this._pending}>
         <header>
-          <button class=${`fan power ${view.on && view.available ? 'running' : ''}`} title=${view.on ? 'Ausschalten' : 'Einschalten'} aria-label=${view.on ? 'Ausschalten' : 'Einschalten'} aria-pressed=${view.on} ?disabled=${disabled}
+          <button class=${`fan power ${view.on && view.available ? 'running' : ''}`} title=${view.on ? 'Turn off' : 'Turn on'} aria-label=${view.on ? 'Turn off' : 'Turn on'} aria-pressed=${view.on} ?disabled=${disabled}
             @click=${() => this._call(view.on ? 'turn_off' : 'turn_on')}><ha-icon icon="mdi:fan" aria-hidden="true"></ha-icon></button>
-          <button class="details" @click=${moreInfo} title="Gerätedetails öffnen" aria-label="Gerätedetails öffnen">
-            <h2>${this._config.name || state?.attributes.friendly_name || 'Ventilator'}</h2>
-            <span class="status" role="status">${this._cycling ? 'Positioniert …' : this._pending ? 'Wird gesendet …' : this._config.subtitle ? `${this._config.subtitle} · ${status}` : status}</span>
+          <button class="details" @click=${moreInfo} title="Open device details" aria-label="Open device details">
+            <h2>${this._config.name || state?.attributes.friendly_name || 'Fan'}</h2>
+            <span class="status" role="status">${locked ? 'Cycling profile locked' : this._cycling ? 'Sweeping · press Lock to stop' : this._pending ? 'Sending …' : this._config.subtitle ? `${this._config.subtitle} · ${status}` : status}</span>
           </button>
         </header>
         <div class="settings">
         ${view.speed ? html`<label class="speed"><ha-icon icon="mdi:weather-windy" aria-hidden="true"></ha-icon>
-          <input type="range" min="0" max="100" step="1" .value=${String(view.on ? view.percentage : 0)} aria-label="Geschwindigkeit" ?disabled=${disabled}
+          <input type="range" min="0" max="100" step="1" .value=${String(view.on ? view.percentage : 0)} aria-label="Speed" ?disabled=${profileDisabled}
             @input=${event => { this.renderRoot.querySelector('output').value = `${event.target.value} %`; }}
             @change=${event => this._call('set_percentage', { percentage: Math.max(0, Math.min(100, Number(event.target.value))) })}>
           <output>${view.available ? `${view.on ? Math.round(view.percentage) : 0} %` : '—'}</output>
         </label>` : nothing}
         <div class="controls">
           <div class="quick-controls">
-            <button class=${`natural ${natural ? 'enabled' : ''}`} ?disabled=${disabled || !view.on || !modes.supported} aria-pressed=${natural}
-              aria-label=${natural ? 'Natural aktiv, zu Normal wechseln' : 'Normal aktiv, zu Natural wechseln'}
-              title=${modes.supported ? natural ? 'Natural · zu Normal wechseln' : 'Normal · zu Natural wechseln' : 'Natural: Modi im Editor zuordnen'}
+            <button class=${`natural ${natural ? 'enabled' : ''}`} ?disabled=${profileDisabled || !view.on || !modes.supported} aria-pressed=${natural}
+              aria-label=${natural ? 'Natural active, switch to Normal' : 'Normal active, switch to Natural'}
+              title=${modes.supported ? natural ? 'Natural · switch to Normal' : 'Normal · switch to Natural' : 'Natural: map presets in the editor'}
               @click=${() => this._call('set_preset_mode', { preset_mode: natural ? modes.normal : modes.natural })}><ha-icon icon=${natural ? 'mdi:leaf' : 'mdi:weather-windy'}></ha-icon></button>
-            ${view.speed ? html`<button class="strength" ?disabled=${disabled} aria-label=${`Stärke ${strength}, nächste Stufe wählen`}
-              title=${`Stärke ${strength} · 33 / 66 / 100 %`} @click=${() => this._call('set_percentage', { percentage: nextStrength(view.percentage).percentage })}><ha-icon icon=${`mdi:numeric-${view.on ? strength : 0}-circle-outline`}></ha-icon></button>` : nothing}
-            ${view.oscillate ? html`<button class="oscillate" ?disabled=${disabled || !view.on} aria-label=${state.attributes.oscillating ? 'Schwenken ausschalten' : 'Schwenken einschalten'} title=${state.attributes.oscillating ? 'Schwenken an' : 'Schwenken aus'} aria-pressed=${!!state.attributes.oscillating}
+            ${view.speed ? html`<button class="strength" ?disabled=${profileDisabled} aria-label=${`Strength ${strength}, select next level`}
+              title=${`Strength ${strength} · 33 / 66 / 100 %`} @click=${() => this._call('set_percentage', { percentage: nextStrength(view.percentage).percentage })}><ha-icon icon=${`mdi:numeric-${view.on ? strength : 0}-circle-outline`}></ha-icon></button>` : nothing}
+            ${view.oscillate ? html`<button class="oscillate" ?disabled=${disabled || !view.on} aria-label=${state.attributes.oscillating ? 'Turn oscillation off' : 'Turn oscillation on'} title=${state.attributes.oscillating ? 'Oscillation on' : 'Oscillation off'} aria-pressed=${!!state.attributes.oscillating}
               @click=${() => this._call('oscillate', { oscillating: !state.attributes.oscillating })}><ha-icon icon="mdi:arrow-left-right"></ha-icon></button>` : nothing}
-            <button class="everyday" ?disabled=${disabled || !everydayProfile} aria-label="Alltagsprofil aktivieren" aria-pressed=${everydayActive} title="Alltagsprofil: Modus, Leistung und Schwenken" @click=${() => this._everyday()}><ha-icon icon="mdi:sofa-outline"></ha-icon></button>
-            <button class="cycling" ?disabled=${!this._cycling && (disabled || !view.oscillate || !canCycle)} aria-label=${cyclingLabel} aria-pressed=${!!this._cycling} title=${canCycle ? cyclingLabel : 'Cycling benötigt eine Positionsrückmeldung oder ein Positionierungs-Script'}
-              @click=${() => this._cycleLeft()}>${this._cycling ? html`<ha-icon icon="mdi:stop"></ha-icon>` : html`<svg class="time-trial" viewBox="0 0 32 26" aria-hidden="true" focusable="false">
-                <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="6.5" cy="19" r="5.2"/><circle cx="25.5" cy="19" r="5.2"/>
-                  <path d="M6.5 19 12 10 19 19H6.5M12 10h10l3.5 9M19 19l3-9V8h3M10 10h4"/>
-                  <path d="M13 5.5h7l3 2h4M13 5.5l-2 5 5 3-2 5" stroke-width="2"/>
-                </g><path d="M20.2 2.7c0-1.2 1-2.2 2.3-2.2 1.4 0 2.7.9 3.1 2.1l-2.8 1.4c-1.4.6-2.6-.1-2.6-1.3Z" fill="currentColor"/>
-              </svg>`}</button>
+            <button class="everyday" ?disabled=${disabled || !everydayProfile} aria-label="Activate Everyday profile" aria-pressed=${everydayActive} title="Everyday: mode, speed and oscillation" @click=${() => this._everyday()}><ha-icon icon="mdi:sofa-outline"></ha-icon></button>
+            <button class="cycling" ?disabled=${disabled || !view.oscillate || (!this._cycling && !canCycle)} aria-label=${cyclingLabel} aria-pressed=${!!this._cycling || locked} title=${canCycle || this._cycling ? cyclingLabel : 'Cycling needs an available sweep angle and supported profile'}
+              @click=${() => this._cycleLeft()}><ha-icon icon=${this._cycling ? 'mdi:lock-outline' : 'mdi:crosshairs'}></ha-icon><span>${this._cycling ? 'Lock' : 'Set'}</span></button>
           </div>
-          ${this._config.show_angle_slider && view.available && view.on && view.oscillate && state.attributes.oscillating === true ? angleAvailable ? html`<label class="speed angle"><span class="angle-label">Schwenkbereich</span>
-            <input type="range" min=${angleMin} max=${angleMax} step=${angleStep > 0 ? angleStep : 1} .value=${String(angle)} aria-label="Schwenkbereich" ?disabled=${disabled || !view.on}
+          ${this._config.show_angle_slider && view.available && view.on && view.oscillate && state.attributes.oscillating === true ? angleAvailable ? html`<label class="speed angle"><span class="angle-label">Sweep angle</span>
+            <input type="range" min=${angleMin} max=${angleMax} step=${angleStep > 0 ? angleStep : 1} .value=${String(angle)} aria-label="Sweep angle" ?disabled=${disabled || !view.on}
               @input=${event => { this.renderRoot.querySelector('.angle output').value = `${event.target.value}°`; }}
               @change=${event => this._call('set_value', { value: Math.max(angleMin, Math.min(angleMax, Number(event.target.value))) }, 'number', angleEntity)}>
-            <output>${angle}°</output></label>` : html`<p class="hint">Schwenkbereich nicht verfügbar. Winkel-Entität unter „Darstellung“ auswählen.</p>` : nothing}
-          ${view.presets.length && !(modes.supported && view.presets.length === 2) ? html`<label class="preset"><ha-icon icon="mdi:tune-variant" aria-hidden="true"></ha-icon><select aria-label="Modus" ?disabled=${disabled || !view.on}
+            <output>${angle}°</output></label>` : html`<p class="hint">Sweep angle unavailable. Select its entity under Cycling in the editor.</p>` : nothing}
+          ${view.presets.length && !(modes.supported && view.presets.length === 2) ? html`<label class="preset"><ha-icon icon="mdi:tune-variant" aria-hidden="true"></ha-icon><select aria-label="Mode" ?disabled=${profileDisabled || !view.on}
             @change=${event => this._call('set_preset_mode', { preset_mode: event.target.value })}>
-              <option value="" ?selected=${!view.presets.includes(state.attributes.preset_mode)} disabled>Modus wählen</option>
+              <option value="" ?selected=${!view.presets.includes(state.attributes.preset_mode)} disabled>Select mode</option>
               ${view.presets.map(mode => html`<option .value=${mode} ?selected=${mode === state.attributes.preset_mode}>${mode}</option>`)}
             </select></label>` : nothing}
         </div>
@@ -174,24 +162,8 @@ export class SmartFan2Card extends LitElement {
 }
 
 class SmartFan2CardEditor extends LitElement {
-  static properties = { hass: { attribute: false }, _config: { state: true }, _creatingScript: { state: true }, _scriptResult: { state: true }, _scriptError: { state: true } };
+  static properties = { hass: { attribute: false, hasChanged: () => true }, _config: { state: true } };
   setConfig(config) { this._config = { ...config }; }
-  async _createScript() {
-    if (this._creatingScript || this._scriptResult) return;
-    this._creatingScript = true;
-    this._scriptError = '';
-    try {
-      const sourceConfig = this._config;
-      const result = await createPositionScript(this.hass, sourceConfig, `smart_fan_2_${crypto.randomUUID().replaceAll('-', '')}`);
-      const unchanged = Object.keys(sourceConfig).every(key => this._config[key] === sourceConfig[key]);
-      const linked = !!result.entityId && unchanged;
-      this._scriptResult = { ...result, linked };
-      if (linked) {
-        this._changed({ stopPropagation() {}, detail: { value: { cycling_mode: 'action', left_entity: result.entityId } } });
-      }
-    } catch (error) { this._scriptError = error?.message || 'Script konnte nicht angelegt werden.'; }
-    finally { this._creatingScript = false; }
-  }
   _changed(event) {
     event.stopPropagation();
     this._config = { ...this._config, ...event.detail.value };
@@ -199,59 +171,26 @@ class SmartFan2CardEditor extends LitElement {
   }
   render() {
     if (!this.hass || !this._config) return nothing;
-    const fields = [
-      { name: 'entity', required: true, selector: { entity: { domain: 'fan' } } },
-      { name: 'name', selector: { text: {} } },
-      { name: 'subtitle', selector: { text: {} } },
-      { name: 'layout', selector: { select: { options: [{ value: 'compact', label: 'Schmal · Dashboard' }, { value: 'wide', label: 'Breit · Web UI' }] } } },
-      { name: 'natural_preset', selector: { text: {} } },
-      { name: 'normal_preset', selector: { text: {} } },
-      { name: 'cycling_mode', selector: { select: { options: [{ value: 'action', label: 'Oszillation aus → Links-Aktion' }, { value: 'position', label: 'Maximal schwenken → am Zielwinkel stoppen' }] } } },
-      { name: 'angle_entity', selector: { entity: { domain: 'number' } } },
-      { name: 'position_entity', selector: { entity: { domain: ['sensor', 'number'] } } },
-      { name: 'target_angle', selector: { number: { min: -360, max: 360, step: 1, mode: 'box', unit_of_measurement: '°' } } },
-      { name: 'cycling_max_angle', selector: { number: { min: 0, max: 360, step: 1, mode: 'box', unit_of_measurement: '°' } } },
-      { name: 'target_tolerance', selector: { number: { min: 0, max: 20, step: 1, mode: 'box', unit_of_measurement: '°' } } },
-      { name: 'cycling_timeout', selector: { number: { min: 1, max: 120, step: 1, mode: 'box', unit_of_measurement: 's' } } },
-      { name: 'left_entity', selector: { entity: { domain: ['button', 'script', 'number', 'select'] } } },
-      { name: 'left_value', selector: { text: {} } },
-    ];
+    const entity = name => ({ name, selector: { entity: { domain: name === 'entity' ? 'fan' : 'number' } } });
+    const text = name => ({ name, selector: { text: {} } });
     const modes = naturalModes(fanView(this.hass.states[this._config.entity]).presets);
-    let canCreateScript = false;
-    if (this._config.cycling_mode === 'position' && this.hass.user?.is_admin) {
-      try { positionScript(this.hass, this._config); canCreateScript = true; } catch { /* Missing real feedback prevents generation. */ }
-    }
     const profileFields = kind => [
       { name: `${kind}_preset`, selector: { select: { options: [{ value: 'nature', label: 'Natural' }, { value: 'normal', label: 'Normal' }] } } },
       { name: `${kind}_percentage`, selector: { number: { min: 1, max: 100, step: 1, mode: 'slider', unit_of_measurement: '%' } } },
       ...(kind === 'everyday' ? [{ name: 'everyday_angle', selector: { number: { min: 1, max: 360, step: 1, mode: 'box', unit_of_measurement: '°' } } }] : []),
     ];
-    const labels = { entity: 'Ventilator', name: 'Name (optional)', subtitle: 'Untertitel (optional)', layout: 'Layout', show_angle_slider: 'Schwenkbereich-Slider anzeigen', natural_preset: 'Natural-Modus', normal_preset: 'Normal-Modus', cycling_mode: 'Cycling: Ablauf', angle_entity: 'Schwenkbereich-Entität (automatisch erkannt, falls leer)', position_entity: 'Tatsächliche Kopfposition (Live-Rückmeldung)', target_angle: 'Zielwinkel', cycling_max_angle: 'Maximaler Schwenkbereich (leer = Entitätsmaximum)', target_tolerance: 'Zieltoleranz (Standard 2°)', cycling_timeout: 'Zeitlimit (Standard 30 s)', left_entity: 'Aktion für ganz links', left_value: 'Zielwert für number/select' };
-    Object.assign(labels, { everyday_preset: 'Modus', everyday_percentage: 'Leistung', everyday_angle: 'Schwenkbereich (Standard 30°)', cycling_preset: 'Modus', cycling_percentage: 'Leistung' });
-    const form = schema => html`<ha-form .hass=${this.hass} .data=${{ layout: 'compact', everyday_preset: 'nature', everyday_percentage: 66, everyday_angle: 30, cycling_preset: 'nature', cycling_percentage: 100, ...this._config }} .schema=${schema} .computeLabel=${field => labels[field.name]}
-    .computeHelper=${field => field.name === 'position_entity' ? 'Muss sich während der Bewegung ändern. oscillation_angle ist der eingestellte Schwenkbereich und keine Positionsrückmeldung.' : field.name === 'cycling_mode' ? 'Zielwinkel-Steuerung läuft im geöffneten Browser. Für unbeaufsichtigten Betrieb ein Home-Assistant-Script als Links-Aktion verwenden.' : undefined}
-    @value-changed=${event => this._changed(event)}></ha-form>`;
-    return html`${form(fields.filter(field => ['entity', 'layout'].includes(field.name)))}
-      <p>Name, Geschwindigkeit, Schwenken und Modi werden vom Ventilator übernommen.</p>
-      <details><summary>Darstellung (optional)</summary>${form([
-        ...fields.filter(field => ['name', 'subtitle'].includes(field.name)),
-        { name: 'show_angle_slider', selector: { boolean: {} } },
-        ...(this._config.show_angle_slider ? fields.filter(field => field.name === 'angle_entity') : []),
-      ])}</details>
-      ${!modes.supported ? html`<details><summary>Modi zuordnen (optional)</summary>${form(fields.filter(field => ['natural_preset', 'normal_preset'].includes(field.name)))}</details>` : nothing}
-      <details><summary>Alltagsprofil</summary>${form(profileFields('everyday'))}<p>Aktiviert Schwenken mit dem eingestellten Schwenkbereich.</p></details>
-      <details><summary>Cycling</summary>${form(profileFields('cycling'))}<p>Eine feste Kopfposition benötigt echte Positionsrückmeldung oder eine passende Positionierungs-Aktion. Der Schwenkbereich allein reicht nicht. <a href="https://github.com/jancrab/smart-fan-2-card/blob/main/docs/cycling-script.md" target="_blank" rel="noopener noreferrer">Script-Vorlage und Anleitung öffnen</a>.</p>${form(fields.filter(field => {
-        if (field.name === 'cycling_mode') return true;
-        if (this._config.cycling_mode === 'position') return ['angle_entity', 'position_entity', 'target_angle', 'cycling_max_angle', 'target_tolerance', 'cycling_timeout'].includes(field.name);
-        return field.name === 'left_entity' || (field.name === 'left_value' && /^(number|select)\./.test(this._config.left_entity || ''));
-      }))}
-      <p>Script-Erstellung: Ablauf „Maximal schwenken“ auswählen und echten Positionssensor sowie Zielwinkel eintragen. Das Script wird gespeichert, aber dabei nicht ausgeführt.</p>
-      <button class="setup-script" ?disabled=${!canCreateScript || this._creatingScript || !!this._scriptResult} @click=${() => this._createScript()}>${this._creatingScript ? 'Script wird angelegt …' : 'Positionierungs-Script anlegen'}</button>
-      ${this._scriptResult ? html`<p>Script gespeichert. <a href=${`/config/script/edit/${this._scriptResult.scriptId}`}>Script öffnen</a>. ${this._scriptResult.linked ? 'Als Cycling-Aktion verknüpft. Weitere Zielwinkeländerungen im Script vornehmen.' : 'Script-Entität danach als Cycling-Aktion auswählen.'}</p>` : nothing}
-      ${this._scriptError ? html`<p role="alert">${this._scriptError}</p>` : nothing}
-      </details>`;
+    const labels = { entity: 'Fan', name: 'Name (optional)', subtitle: 'Subtitle (optional)', layout: 'Layout', show_angle_slider: 'Show sweep angle slider', angle_entity: 'Sweep angle entity (auto-detected when empty)', natural_preset: 'Natural preset name', normal_preset: 'Normal preset name', everyday_preset: 'Mode', everyday_percentage: 'Speed', everyday_angle: 'Sweep angle (default 30°)', cycling_preset: 'Locked mode', cycling_percentage: 'Locked speed' };
+    const form = schema => html`<ha-form .hass=${this.hass} .data=${{ layout: 'compact', everyday_preset: 'nature', everyday_percentage: 66, everyday_angle: 30, cycling_preset: 'nature', cycling_percentage: 100, ...this._config }} .schema=${schema} .computeLabel=${field => labels[field.name]} @value-changed=${event => this._changed(event)}></ha-form>`;
+    return html`${form([{ ...entity('entity'), required: true }, { name: 'layout', selector: { select: { options: [{ value: 'compact', label: 'Compact · Dashboard' }, { value: 'wide', label: 'Wide · Web UI' }] } } }])}
+      <p>Name, speed, oscillation and modes come from the fan entity.</p>
+      <details><summary>Appearance (optional)</summary>${form([text('name'), text('subtitle'), { name: 'show_angle_slider', selector: { boolean: {} } }])}</details>
+      ${!modes.supported ? html`<details><summary>Preset mapping (optional)</summary>${form([text('natural_preset'), text('normal_preset')])}</details>` : nothing}
+      <details><summary>Everyday profile</summary>${form(profileFields('everyday'))}<p>Turns on oscillation at the selected sweep angle.</p></details>
+      <details><summary>Cycling · Set / Lock</summary>${form(profileFields('cycling'))}${form([entity('angle_entity')])}
+      <p>Press Set to apply this profile and start the maximum sweep supported by the angle entity. Press Lock when the head reaches your preferred position. No position sensor or script is required.</p>
+      <p>Lock stops oscillation and reapplies this profile. Speed and mode controls stay locked in this card until you press Set, use Everyday, toggle oscillation or turn off the fan. Other cards and automations can still change the fan. Reloading the page clears the UI lock.</p></details>`;
   }
-  static styles = css`p { color: var(--secondary-text-color); font-size: 13px; } details { border-top: 1px solid var(--divider-color); padding: 12px 0; } summary { cursor: pointer; padding: 4px 0; } button { min-height: 44px; padding: 0 16px; cursor: pointer; } button:disabled { cursor: not-allowed; opacity: .5; } a { color: var(--primary-color); }`;
+  static styles = css`p { color: var(--secondary-text-color); font-size: 13px; line-height: 1.5; } details { border-top: 1px solid var(--divider-color); padding: 12px 0; } summary { cursor: pointer; padding: 4px 0; }`;
 }
 
 if (!customElements.get('smart-fan-2-card')) customElements.define('smart-fan-2-card', SmartFan2Card);
@@ -259,6 +198,6 @@ if (!customElements.get('smart-fan-2-card-editor')) customElements.define('smart
 window.customCards = window.customCards || [];
 if (!window.customCards.some(card => card.type === 'smart-fan-2-card')) window.customCards.push({
   type: 'smart-fan-2-card', name: 'Smart Fan 2 Card', preview: true,
-  description: 'Steuerung für Smart Fan 2 und kompatible fan-Entitäten.',
+  description: 'Controls for Smart Fan 2 and compatible fan entities.',
 });
 console.info(`SMART FAN 2 CARD ${__VERSION__}`);

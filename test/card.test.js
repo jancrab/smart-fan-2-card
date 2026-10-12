@@ -21,7 +21,6 @@ async function fixture(entity = state(), config = {}) {
 test('rejects other domains and invalid layouts', () => {
   assert.throws(() => validateConfig({ entity: 'light.test' }));
   assert.throws(() => validateConfig({ entity: 'fan.test', layout: 'bad' }));
-  assert.throws(() => validateConfig({ entity: 'fan.test', left_entity: 'number.left' }));
 });
 test('handles unavailable states and hides unsupported capabilities', () => {
   assert.equal(fanView(undefined).available, false);
@@ -52,35 +51,63 @@ test('actual buttons send correct fan services and target', async () => {
   await card.updateComplete;
   assert.deepEqual(calls[3], ['fan', 'turn_off', { entity_id: 'fan.test' }]);
 });
-test('Cycling stops oscillation before running the left action', async () => {
-  const { card, calls } = await fixture(state(), { left_entity: 'script.left' });
-  await card._cycleLeft();
-  assert.deepEqual(calls, [
-    ['fan', 'oscillate', { entity_id: 'fan.test', oscillating: false }],
-    ['fan', 'set_preset_mode', { entity_id: 'fan.test', preset_mode: 'Natural Wind' }],
-    ['homeassistant', 'update_entity', { entity_id: 'fan.test' }],
-    ['fan', 'set_percentage', { entity_id: 'fan.test', percentage: 100 }],
-    ['script', 'turn_on', { entity_id: 'script.left' }],
-  ]);
-});
-test('a button with no previous press remains usable', async () => {
-  const { card, root, calls } = await fixture(state(), { left_entity: 'button.left' });
-  assert.equal(root.querySelector('.cycling').disabled, false);
-  await card._cycleLeft();
-  assert.deepEqual(calls.at(-1), ['button', 'press', { entity_id: 'button.left' }]);
-});
-test('position Cycling is disabled until real feedback is available', async () => {
-  const { root } = await fixture(state(), { cycling_mode: 'position', angle_entity: 'number.sweep', position_entity: 'sensor.position', target_angle: -60 });
-  assert.equal(root.querySelector('.cycling').disabled, true);
-});
-test('Cycling does not move if stopping oscillation fails', async () => {
-  const { card, calls } = await fixture(state(), { left_entity: 'script.left' });
-  card.hass.callService = async (...args) => { calls.push(args); throw new Error('offline'); };
+test('Set applies configured profile, sets maximum sweep, and Lock stops before profile commands', async () => {
+  const { card, root, calls } = await fixture(state(), { cycling_preset: 'normal', cycling_percentage: 72 });
+  card.hass.states['number.test_oscillation_angle'] = { state: '30', attributes: { min: 1, max: 120, step: 1 } };
   await card._cycleLeft();
   await card.updateComplete;
-  assert.equal(calls.length, 1);
-  assert.equal(card.shadowRoot.querySelector('[role=alert]').textContent, 'offline');
+  assert.equal(root.querySelector('.cycling span').textContent, 'Lock');
+  assert.deepEqual(calls.map(call => [call[0], call[1], call[2]]), [
+    ['fan', 'oscillate', { entity_id: 'fan.test', oscillating: false }],
+    ['fan', 'set_preset_mode', { entity_id: 'fan.test', preset_mode: 'Straight Wind' }],
+    ['homeassistant', 'update_entity', { entity_id: 'fan.test' }],
+    ['fan', 'set_percentage', { entity_id: 'fan.test', percentage: 72 }],
+    ['number', 'set_value', { entity_id: 'number.test_oscillation_angle', value: 120 }],
+    ['fan', 'oscillate', { entity_id: 'fan.test', oscillating: true }],
+  ]);
+  calls.length = 0;
+  await card._cycleLeft();
+  assert.deepEqual(calls[0], ['fan', 'oscillate', { entity_id: 'fan.test', oscillating: false }]);
+  assert.equal(calls.at(-1)[2].percentage, 72);
+  card.hass.states['fan.test'].attributes = { ...card.hass.states['fan.test'].attributes, percentage: 72, oscillating: false };
+  card.hass = card.hass;
+  await card.updateComplete;
+  assert.equal(root.querySelector('.natural').disabled, true);
+  assert.equal(root.querySelector('.strength').disabled, true);
+  assert.equal(root.querySelector('.speed input').disabled, true);
+  assert.match(root.querySelector('.status').textContent, /locked/);
+  await card._cycleLeft();
+  await card.updateComplete;
+  assert.equal(root.querySelector('.strength').disabled, false);
 });
+
+test('missing sweep disables Set but never prevents Lock from stopping', async () => {
+  const { card, root, calls } = await fixture();
+  assert.equal(root.querySelector('.cycling').disabled, true);
+  await card._cycleLeft();
+  assert.equal(calls.length, 0);
+  card._cycling = true;
+  await card.updateComplete;
+  assert.equal(root.querySelector('.cycling').disabled, false);
+  await card._cycleLeft();
+  assert.equal(calls[0][2].oscillating, false);
+});
+
+test('failed sweep setup never starts oscillation; failed stop stays retryable', async () => {
+  const { card, calls } = await fixture();
+  card.hass.states['number.test_oscillation_angle'] = { state: '30', attributes: { min: 1, max: 120 } };
+  card.hass.callService = async (...args) => { calls.push(args); if (args[1] === 'set_value') throw new Error('offline'); };
+  await card._cycleLeft();
+  assert.equal(!!card._cycling, false);
+  assert.ok(!calls.some(call => call[2].oscillating === true));
+  card._cycling = true;
+  card.hass.callService = async () => { throw new Error('stop failed'); };
+  await card._cycleLeft();
+  assert.equal(card._cycling, true);
+  await card.updateComplete;
+  assert.equal(card.shadowRoot.querySelector('[role=alert]').textContent, 'stop failed');
+});
+
 test('unavailable fan cannot trigger services', async () => {
   const { card, root, calls } = await fixture(state({ state: 'unavailable' }));
   assert.equal(root.querySelector('.power').disabled, true);
@@ -107,11 +134,13 @@ test('editor filters selectable entities to fan domain and emits preserved confi
   form.dispatchEvent(new CustomEvent('value-changed', { detail: { value: { entity: 'fan.other' } } }));
   assert.equal(result.entity, 'fan.other');
   assert.equal(result.layout, 'wide');
-  editor.setConfig({ ...result, cycling_mode: 'position' });
+  editor.setConfig(result);
   await editor.updateComplete;
   const schemas = [...editor.shadowRoot.querySelectorAll('ha-form')].flatMap(item => item.schema);
-  assert.equal(schemas.find(field => field.name === 'target_angle').selector.number.unit_of_measurement, '°');
-  assert.deepEqual(schemas.find(field => field.name === 'position_entity').selector.entity.domain, ['sensor', 'number']);
+  assert.equal(schemas.find(field => field.name === 'cycling_preset').selector.select.options[0].value, 'nature');
+  assert.equal(schemas.find(field => field.name === 'cycling_percentage').selector.number.max, 100);
+  assert.equal(schemas.some(field => field.name === 'position_entity'), false);
+  assert.equal(editor.shadowRoot.querySelector('.setup-script'), null);
 });
 
 test('Xiaomi nature/normal modes override stale mappings and toggle in both directions', async () => {
@@ -184,27 +213,4 @@ test('Natural button refreshes when HA assigns an updated but reused hass object
   await card.updateComplete;
   assert.equal(root.querySelector('.natural').getAttribute('aria-pressed'), 'true');
   assert.equal(root.querySelector('.natural ha-icon').getAttribute('icon'), 'mdi:leaf');
-});
-
-test('editor creates and links a positioning script without running it', async () => {
-  const editor = document.createElement('smart-fan-2-card-editor');
-  editor.setConfig({ type: 'custom:smart-fan-2-card', entity: 'fan.test', cycling_mode: 'position', angle_entity: 'number.sweep', position_entity: 'sensor.position', target_angle: -60 });
-  let scriptId, result;
-  editor.hass = {
-    user: { is_admin: true }, states: {
-      'fan.test': state(), 'number.sweep': { state: '30', attributes: { min: 1, max: 120 } }, 'sensor.position': { state: '0' },
-    },
-    callApi: async (method, path) => { assert.equal(method, 'POST'); scriptId = path.split('/').at(-1); },
-    callWS: async () => [{ platform: 'script', unique_id: scriptId, entity_id: 'script.generated_position' }],
-  };
-  editor.addEventListener('config-changed', event => { result = event.detail.config; });
-  document.body.append(editor);
-  await editor.updateComplete;
-  assert.equal(editor.shadowRoot.querySelector('.setup-script').disabled, false);
-  await editor._createScript();
-  await editor.updateComplete;
-  assert.equal(result.cycling_mode, 'action');
-  assert.equal(result.left_entity, 'script.generated_position');
-  assert.equal(editor._scriptResult.linked, true);
-  assert.equal(editor.shadowRoot.querySelector('.setup-script').disabled, true);
 });

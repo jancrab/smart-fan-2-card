@@ -49,7 +49,9 @@ export const cardStyles = css`
   .fan ha-icon { --mdc-icon-size: 25px; }
   .fan.running ha-icon { animation: fan-spin 2s linear infinite; }
   @keyframes fan-spin { to { transform: rotate(360deg); } }
-  .time-trial { width: 28px; height: 24px; pointer-events: none; }
+  .cycling { flex-direction: column; gap: 2px; }
+  .cycling span { font-size: 10px; line-height: 12px; }
+  .cycling ha-icon { --mdc-icon-size: 19px; }
   .running { color: var(--accent); }
   .details { display: block; flex: 1; min-width: 0; text-align: left; border-radius: 4px; }
   h2 { margin: 0 0 3px; font-size: 14px; line-height: 1.35; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }

@@ -1,26 +1,25 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Smart Fan 2 · Karten-Vorschau</title>
+<title>Smart Fan 2 · Card preview</title>
 <style>
   body { margin:0; padding:32px; background:#f4f5f6; color:#24292e; font-family:Arial,sans-serif; }
   main { max-width:920px; margin:auto; } h1 { font-weight:600; font-size:18px; margin:0 0 28px; } .label { color:#656e77; font-size:12px; margin:0 0 10px; }
   .layouts { display:grid; grid-template-columns:280px minmax(0,1fr); gap:24px; align-items:start; }
   smart-fan-2-card { display:block; } details { margin-top:28px; font-size:12px; color:#656e77; } summary { cursor:pointer; padding:12px 0; } input { padding:6px; border:1px solid #d6dbe0; border-radius:6px; } #log { font-size:12px; white-space:pre-wrap; overflow-wrap:anywhere; } @media(max-width:760px) { .layouts { grid-template-columns:1fr; } body { padding:20px; } .compact { max-width:280px; } }
 </style>
-<main><h1>Ventilator</h1>
-<div class="layouts"><section class="compact"><p class="label">Dashboard · 280 px</p><smart-fan-2-card id="compact"></smart-fan-2-card></section><section><p class="label">Breite Ansicht</p><smart-fan-2-card id="wide"></smart-fan-2-card></section></div>
-<details><summary>Demo-Einstellungen</summary><p>Simulierte Geräte, keine Verbindung zu Home Assistant.</p><p><label>Cycling-Zielwinkel: <input id="target" type="number" min="-120" max="120" step="1" value="-60"> °</label> · <span id="position">Kopfposition: 0°</span></p><p id="log" role="status">Bereit.</p></details></main>
+<main><h1>Fan</h1>
+<div class="layouts"><section class="compact"><p class="label">Dashboard · 280 px</p><smart-fan-2-card id="compact"></smart-fan-2-card></section><section><p class="label">Wide layout</p><smart-fan-2-card id="wide"></smart-fan-2-card></section></div>
+<details><summary>Demo settings</summary><p>Simulated devices. No connection to Home Assistant.</p><p>Press Set, then Lock to stop the simulated sweep. <span id="position">Simulated head position: 0°</span></p><p id="log" role="status">Ready.</p></details></main>
 <script type="module">
 await import('/demo/icons.js');
 await import('../dist/smart-fan-2-card.js');
 let state = { state:'on', attributes:{ friendly_name:'Smartmi Standing Fan 2S', supported_features:59, percentage:33, percentage_step:1, oscillating:true, preset_modes:['normal','nature'], preset_mode:'normal' } };
 let position=0, sweep=30, movement;
-const config = {entity:'fan.demo',show_angle_slider:true,cycling_mode:'position',angle_entity:'number.sweep',position_entity:'sensor.position',target_angle:-60,name:'Wohnzimmer'};
+const config = {entity:'fan.demo',show_angle_slider:true,angle_entity:'number.sweep',name:'Living room'};
 const cards = ['compact','wide'].map(layout => { const card=document.getElementById(layout);card.setConfig({...config,layout});return card; });
-document.getElementById('target').addEventListener('change',event=>{config.target_angle=Number(event.target.value);cards.forEach(card=>card.setConfig({...config,layout:card.id}));});
-function update() { document.getElementById('position').textContent=`Kopfposition: ${position}°`; const hass={states:{'fan.demo':state,'number.sweep':{state:String(sweep),attributes:{min:1,max:120,step:1}},'sensor.position':{state:String(position)}},callService:async(domain,service,data)=>{
+function update() { document.getElementById('position').textContent=`Simulated head position: ${position}°`; const hass={states:{'fan.demo':state,'number.sweep':{state:String(sweep),attributes:{min:1,max:120,step:1}},'sensor.position':{state:String(position)}},callService:async(domain,service,data)=>{
   document.getElementById('log').textContent=JSON.stringify({domain,service,...data},null,2);
   state={...state,attributes:{...state.attributes}};
   if(service==='turn_off' && domain==='fan') state.state='off';
@@ -31,7 +30,7 @@ function update() { document.getElementById('position').textContent=`Kopfpositio
   if(service==='oscillate') {
     state.attributes.oscillating=data.oscillating;
     clearInterval(movement);
-    if(data.oscillating) { let direction=position>config.target_angle?-1:1; movement=setInterval(()=>{position+=direction*5;if(position<=-120 || position>=120)direction*=-1;update();},150); }
+    if(data.oscillating) { let direction=position>0?-1:1; movement=setInterval(()=>{position+=direction*5;if(position<=-120 || position>=120)direction*=-1;update();},150); }
   }
   update();
 }};cards.forEach(card=>{card.hass=hass;});}update();

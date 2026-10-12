@@ -1,6 +1,6 @@
-import { mdiSofaOutline, mdiFan, mdiPower, mdiLeaf, mdiRotateLeft, mdiArrowLeftRight, mdiWeatherWindy, mdiStop, mdiTuneVariant, mdiNumeric0CircleOutline, mdiNumeric1CircleOutline, mdiNumeric2CircleOutline, mdiNumeric3CircleOutline } from '@mdi/js';
+import { mdiCrosshairs, mdiLockOutline, mdiSofaOutline, mdiFan, mdiPower, mdiLeaf, mdiRotateLeft, mdiArrowLeftRight, mdiWeatherWindy, mdiStop, mdiTuneVariant, mdiNumeric0CircleOutline, mdiNumeric1CircleOutline, mdiNumeric2CircleOutline, mdiNumeric3CircleOutline } from '@mdi/js';
 
-const paths = { 'mdi:sofa-outline': mdiSofaOutline, 'mdi:fan': mdiFan, 'mdi:power': mdiPower, 'mdi:leaf': mdiLeaf, 'mdi:rotate-left': mdiRotateLeft, 'mdi:arrow-left-right': mdiArrowLeftRight, 'mdi:weather-windy': mdiWeatherWindy, 'mdi:stop': mdiStop, 'mdi:tune-variant': mdiTuneVariant,
+const paths = { 'mdi:crosshairs': mdiCrosshairs, 'mdi:lock-outline': mdiLockOutline, 'mdi:sofa-outline': mdiSofaOutline, 'mdi:fan': mdiFan, 'mdi:power': mdiPower, 'mdi:leaf': mdiLeaf, 'mdi:rotate-left': mdiRotateLeft, 'mdi:arrow-left-right': mdiArrowLeftRight, 'mdi:weather-windy': mdiWeatherWindy, 'mdi:stop': mdiStop, 'mdi:tune-variant': mdiTuneVariant,
   'mdi:numeric-0-circle-outline': mdiNumeric0CircleOutline, 'mdi:numeric-1-circle-outline': mdiNumeric1CircleOutline, 'mdi:numeric-2-circle-outline': mdiNumeric2CircleOutline, 'mdi:numeric-3-circle-outline': mdiNumeric3CircleOutline };
 class DemoIcon extends HTMLElement {
   static observedAttributes = ['icon'];

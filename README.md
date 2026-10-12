@@ -1,142 +1,83 @@
 # Smart Fan 2 Card
 
-Home-Assistant-Dashboard-Karte für Smartmi Standing Fan 2S / Smart Fan 2 und andere `fan.*`-Entitäten. Der visuelle Editor bietet alle Fan-Entitäten zur Auswahl an. Name und unterstützte Funktionen werden aus der ausgewählten Entität übernommen.
+A Home Assistant dashboard card for Smartmi Standing Fan 2S / Smart Fan 2 and compatible `fan.*` entities. Select a fan and a layout; the card reads its name, supported controls and modes automatically.
 
-Aktuelle Version: **0.7.0**. Vereinfachter Editor mit automatischer Übernahme der Fan-Eigenschaften und optionalem Schwenkbereich-Slider.
+Current version: **0.8.0**.
 
-![Schmales und breites Layout im Dark Mode](docs/dark-preview.png)
+![Compact and wide layouts in dark mode](docs/dark-preview.png)
 
-## Funktionen
+## Features
 
-- Zwei Layouts: `compact` (schmal, Dashboard) und `wide` (breit, Web UI). Breit fällt auf kleinen Displays auf eine Spalte zurück.
-- Fan-Symbol als Ein-/Ausschalter: dreht sich im Betrieb und steht ausgeschaltet still. Die Systemeinstellung „Bewegung reduzieren“ deaktiviert die Animation.
-- Geschwindigkeitsregler, Oszillation und verfügbare Preset-Modi.
-- Optionaler Schwenkbereich-Slider unter der Button-Reihe. Erkennt die zugehörige Winkel-Entität automatisch über dasselbe Gerät oder den passenden Entitätsnamen und übernimmt Min/Max/Schrittweite.
-- Normal/Natural-Taste: blau für Normal, grün für Natural. Erkennt unter anderem `Straight Wind` / `Natural Wind`; abweichende Namen im Editor zuordnen.
-- Stärke-Taste: schaltet zyklisch auf 33, 66 und 100 Prozent.
-- Cycling-Taste mit Rennrad und Fahrer in Zeitfahrhaltung: deaktiviert zuerst Oszillation und führt anschließend eine konfigurierte Aktion für „ganz links“ aus. Beim laufenden Zielwinkel-Ablauf wird sie zur Stopptaste.
-- Alternativer Cycling-Ablauf im Editor: maximalen Schwenkbereich einstellen, Oszillation starten und bei konfigurierbarem Zielwinkel stoppen. Benötigt eine getrennte Entität für die echte Kopfposition.
-- Theme-Variablen, Tastaturbedienung, reduzierte Animation, Fehlermeldungen und Schutz gegen parallele Bedienbefehle.
+- Compact dashboard and wide web layouts, responsive to the available space.
+- Click the animated fan icon to turn power on or off. Respects reduced motion.
+- Speed slider and strength levels at 33 / 66 / 100%.
+- Normal (blue) / Natural (green) toggle, using the exact presets exposed by your integration, including `normal` / `nature`.
+- Oscillation toggle and optional sweep angle slider. The slider appears while oscillation is active.
+- Everyday profile: Natural, 66%, oscillation at 30° by default.
+- Cycling **Set / Lock**: manually stop the head at your preferred position with a configurable speed and mode.
+- Home Assistant theme variables, keyboard focus, accessible labels and service error feedback.
 
-## Installation mit HACS
+## Install through HACS
 
-Das Repository ist öffentlich und kann in HACS als benutzerdefiniertes Dashboard-Repository hinzugefügt werden. Alternativ ist eine manuelle Installation möglich.
+[![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=jancrab&repository=smart-fan-2-card&category=plugin)
 
-Offizielle Anleitungen: [Allgemeine Anforderungen](https://hacs.xyz/docs/publish/start/), [Dashboard-Plugins](https://hacs.xyz/docs/publish/plugin/), [Custom Repositories](https://hacs.xyz/docs/faq/custom_repositories/), [Custom Cards](https://developers.home-assistant.io/docs/frontend/custom-ui/custom-card/).
+HACS must already be installed. The button opens the repository in your Home Assistant instance, where you confirm adding and downloading it.
 
-### Manuelle Installation
+Alternatively, open HACS → menu → Custom repositories, add `https://github.com/jancrab/smart-fan-2-card` as a **Dashboard** repository, then download the card. Check that `/hacsfiles/smart-fan-2-card/smart-fan-2-card.js` is registered as a JavaScript module. Reload the browser and add **Smart Fan 2 Card** to your dashboard.
 
-1. `dist/smart-fan-2-card.js` nach `/config/www/smart-fan-2-card.js` kopieren.
-2. Unter Einstellungen → Dashboards → Ressourcen die URL `/local/smart-fan-2-card.js?v=0.7.0` als **JavaScript-Modul** hinzufügen (erweiterter Modus ggf. aktivieren).
-3. Browser vollständig neu laden, dann Dashboard bearbeiten → Karte hinzufügen → **Smart Fan 2 Card** → Fan-Entität und Layout auswählen.
+See the [HACS custom repository guide](https://hacs.dev/docs/faq/custom_repositories/) and [My Home Assistant link guide](https://hacs.dev/docs/use/my/).
 
-Bei einem Update die Datei ersetzen und die bestehende Ressourcen-URL mit einem neuen `?v=…`-Wert aktualisieren, damit der Browser die neue Datei lädt. Keine zweite Ressource für dieselbe Karte anlegen. Ein Home-Assistant-Neustart ist dafür nicht erforderlich.
+### Manual installation
 
-### HACS Custom Repository
+1. Copy `dist/smart-fan-2-card.js` to `/config/www/smart-fan-2-card.js`.
+2. Under Settings → Dashboards → Resources, add `/local/smart-fan-2-card.js?v=0.8.0` as a **JavaScript module**. Enable advanced mode if needed.
+3. Reload the browser and add the card.
 
-[![In HACS öffnen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=jancrab&repository=smart-fan-2-card&category=plugin)
+For updates, replace the file and change the version query on the existing resource. Do not add duplicate resources. A Home Assistant restart is not required.
 
-Der Button öffnet das Repository in HACS deiner Home-Assistant-Instanz; dort bestätigst du das Hinzufügen und Herunterladen. HACS muss bereits installiert sein. Siehe [offizielle Anleitung zu My-Links](https://hacs.dev/docs/use/my/).
+## Configuration
 
-1. HACS → Menü ⋮ → Benutzerdefinierte Repositories.
-2. `https://github.com/jancrab/smart-fan-2-card` eintragen und Typ **Dashboard** auswählen.
-3. Karte herunterladen und Browser neu laden. Ressource prüfen: `/hacsfiles/smart-fan-2-card/smart-fan-2-card.js`, Typ JavaScript-Modul. Bei YAML-verwalteten Ressourcen selbst eintragen.
-4. Die Karte im Dashboard hinzufügen. Keine Aufnahme in den HACS-Standardkatalog erforderlich.
-
-## Konfiguration
-
-### Alltags- und Cycling-Profil
-
-Die Sofa-Taste neben Cycling aktiviert standardmäßig **Natural, 66 % und Oszillation mit 30° Schwenkbereich**. Sie schaltet den Lüfter bei Bedarf ein. Preset, Leistung und Schwenkbereich stehen im Editor unter **Alltagsprofil**. Cycling setzt standardmäßig **Natural und 100 %** und führt danach den konfigurierten Positionierungsablauf aus; Preset und Leistung stehen unter **Cycling**.
-
-```yaml
-everyday_preset: nature # oder normal; wird auf den echten Fan-Preset abgebildet
-everyday_percentage: 66
-everyday_angle: 30 # Grad, kein Prozentwert
-cycling_preset: nature # oder normal
-cycling_percentage: 100
-```
-
-Die Profilbefehle laufen der Reihe nach. Fehlt beim Alltagsprofil ein gültiger Schwenkbereich, startet die Taste keine Befehle. Bei einem Fehler wird der Ablauf abgebrochen; bereits gesetzte Werte werden nicht zurückgesetzt. Die Sofa-Taste wird nur aktiv markiert, wenn die zurückgemeldeten Fan- und Winkelwerte zum Profil passen.
-
-Eine feste Kopfposition benötigt eine passende Geräteaktion oder echte Positionsrückmeldung. Die bislang gemeldete Winkel-Entität stellt nur den Schwenkbereich ein. [Script-Erstellung direkt im Karteneditor, Vorlage, Einrichtung und Prüfung der erreichbaren Funktion](docs/cycling-script.md) sind auch im Editor verlinkt. Ohne passende Rückmeldung/Aktion bleibt die Positionierung gesperrt.
-
-### Grundeinstellungen
-
-Im visuellen Editor reichen **Ventilator** und **Layout**. Name, Funktionen und Modi kommen aus der Fan-Entität. Unter **Darstellung (optional)** können Name/Untertitel überschrieben und der Schwenkbereich-Slider aktiviert werden. Cycling liegt in einem getrennten optionalen Bereich; dort werden nur die Felder des ausgewählten Ablaufs angezeigt. Manuelle Moduszuordnung erscheint nur, wenn die Presets nicht automatisch erkannt werden.
+The visual editor starts with **Fan** and **Layout**. Optional sections cover appearance, Everyday and Cycling profiles. Manual preset mapping appears when the fan modes cannot be recognized automatically.
 
 ```yaml
 type: custom:smart-fan-2-card
-entity: fan.dein_ventilator
-layout: compact # alternativ: wide
-```
-
-Der Anzeigename kommt aus `friendly_name`. Optional sind `name` und `subtitle` überschreibbar. Zusätzliche Zuordnungen:
-
-Schwenkbereich-Slider aktivieren:
-
-```yaml
+entity: fan.smartmi_standing_fan_2s
+layout: compact # or wide
 show_angle_slider: true
-# Optional, falls keine eindeutige automatische Zuordnung möglich ist:
-angle_entity: number.smartmi_standing_fan_2s_oscillation_angle
+# Optional override if automatic discovery is ambiguous:
+# angle_entity: number.smartmi_standing_fan_2s_oscillation_angle
+
+everyday_preset: nature # or normal
+everyday_percentage: 66
+everyday_angle: 30 # degrees
+cycling_preset: nature # or normal
+cycling_percentage: 100
 ```
 
-Der Slider setzt den Schwenkbereich über `number.set_value`; er steuert keine absolute Kopfposition und schaltet Oszillation nicht automatisch ein. Ohne verfügbare Winkel-Entität zeigt die Karte einen Hinweis. Standardmäßig ist der Slider deaktiviert. Wenn aktiviert, erscheint er nur bei eingeschaltetem Ventilator und aktiver Oszillation. Beim Abschalten der Oszillation wird er ausgeblendet; beim Einschalten zeigt er den aktuellen Winkel aus Home Assistant. Dadurch wird kein Winkel automatisch verändert.
+Optional `name` and `subtitle` override the heading. `natural_preset` and `normal_preset` can map unusual integration preset names. Invalid old mappings are ignored when absent from the fan's presets.
 
-```yaml
-natural_preset: Natural Wind # exakt wie in preset_modes
-normal_preset: Straight Wind
-left_entity: script.ventilator_ganz_links
-```
+### Cycling: Set / Lock
 
-`left_entity` kann eine `button`-, `script`-, `number`- oder `select`-Entität sein. Bei `number` zusätzlich `left_value` mit dem vom Gerät erwarteten Zahlenwert angeben; bei `select` mit dem exakten Optionsnamen. Die Taste bleibt ohne verfügbare Aktion deaktiviert. Ein Links-Schritt ist keine absolute Endposition: nur eine Aktion zuordnen, die tatsächlich bis zum linken Anschlag fährt. Das Script darf keine Wartezeit vor dem Stoppen der Oszillation voraussetzen; nötige gerätespezifische Wartezeiten gehören ins Script.
+1. Configure **Locked mode** and **Locked speed** under **Cycling · Set / Lock**. Defaults are Natural and 100%.
+2. Press **Set**. The card turns the fan on if needed, applies the profile, sets the sweep angle entity to its reported maximum (120° for the supplied Smartmi entity), then starts oscillation.
+3. Watch the physical head. Press **Lock** at your preferred position. The card sends the stop command first, then reapplies the configured mode and speed.
+4. Speed and mode controls in this card are locked while the reported state matches the locked profile. Use Set to reposition, Everyday to restore the everyday profile, toggle oscillation, or turn the fan off to exit the lock.
 
-`number.smartmi_standing_fan_2s_oscillation_angle` legt den Schwenkbereich fest und darf nicht mit einer absoluten Kopfposition verwechselt werden. Diese Entität wird deshalb nicht automatisch als Links-Aktion zugeordnet.
+No positioning script, administrator permission or live position sensor is required. A sweep angle entity is needed to start maximum sweep; it is auto-detected from the same device or the matching fan entity name. You can override it in the editor. Lock remains available during positioning even if the angle entity becomes unavailable.
 
-### Cycling mit Zielwinkel
+This is manual positioning: the card cannot measure or guarantee an absolute head angle. The stop has network/device latency. The lock applies to this card's controls, and clears on page reload; other cards and automations can change the fan. Closing the page while sweeping leaves oscillation running until you stop it through Home Assistant.
 
-Im visuellen Editor **Cycling: Ablauf → Maximal schwenken → am Zielwinkel stoppen** wählen. Dort sind Schwenkbereich-Entität, Positionsrückmeldung, Zielwinkel, optionaler Maximalwinkel, Toleranz und Zeitlimit einstellbar. Beispiel mit einer hypothetischen Positionsentität:
+Older `cycling_mode`, `position_entity`, `target_angle`, `target_tolerance`, `cycling_timeout`, `cycling_max_angle`, `left_entity` and `left_value` fields are ignored in 0.8.0 and can be removed from YAML. The former positioning script generator and blueprint have been removed from the current version; scripts already saved in Home Assistant remain there but are no longer called by the card. [Migration details](docs/cycling-script.md).
 
-```yaml
-cycling_mode: position
-angle_entity: number.smartmi_standing_fan_2s_oscillation_angle
-position_entity: sensor.dein_ventilator_kopfposition # muss wirklich existieren und die Bewegung melden
-target_angle: -60
-target_tolerance: 2
-cycling_timeout: 30
-# cycling_max_angle: 120 # ohne Angabe: max-Attribut der angle_entity
-```
+### Sweep angle and head position
 
-Schwenkbereich und Position dürfen nicht dieselbe Entität sein. Ein erneut gedrückter Cycling-Button bricht den Ablauf ab und sendet einen Stop-Befehl. Fehlende Rückmeldung, Zeitlimit oder das Entfernen der Karte stoppen ebenfalls den Ablauf. Der eingestellte Schwenkbereich bleibt erhalten. Die Stop-Genauigkeit hängt von Aktualisierungsintervall und Befehlslatenz ab; beim Überspringen des Zielwinkels wird nachträglich gestoppt.
+`number.smartmi_standing_fan_2s_oscillation_angle` configures the sweep width. It does not report the live head position. None of the entities supplied for this device expose a live position sensor. The reference card's hardcoded 30/60/90/120° values are sweep presets. [Reference analysis](docs/reference-features.md).
 
-Die Steuerung läuft im Browser: Ein vollständiger Browserabsturz, geschlossenes Fenster oder Netzwerkverlust kann den Stop-Befehl verhindern. Für einen vom geöffneten Dashboard unabhängigen Ablauf ein serverseitiges Home-Assistant-Script als Links-Aktion verwenden. Ob dein Gerät eine echte Positionsrückmeldung anbietet, muss am Gerät geprüft werden. [Analyse der Referenzkarte](docs/reference-features.md).
+The angle slider inherits the entity's min/max/step and calls `number.set_value`. It does not turn oscillation on automatically. Everyday restores its configured sweep width after Cycling.
 
-Natural erkennt auch die Xiaomi-Presets `nature` und `normal`. Veraltete manuelle Zuordnungen werden ignoriert, wenn sie nicht in den aktuellen Presets vorkommen. Ohne eindeutiges Moduspaar bleibt Natural deaktiviert. Die Karte steuert über die normale Fan-API, nicht direkt über Xiaomi-Cloud-Zugangsdaten. Zusätzliche Gerätefunktionen können je nach Xiaomi-Home-Modell als separate Entitäten vorliegen. Ein Test am realen Gerät steht aus.
+## Themes and accessibility
 
-## Entwicklung
-
-```sh
-npm ci
-npm run check
-npm run dev
-```
-
-Vorschauen bei laufendem Dev-Server:
-
-- Hell: <http://127.0.0.1:4173> (`demo/index.html`).
-- Dunkel: <http://127.0.0.1:4173/demo/dark.html> (`demo/dark.html`).
-
-Beide zeigen die echte gebaute Karte mit simulierten Geräten und senden keine Gerätebefehle. Die Dark-Mode-Vorschau setzt Home-Assistant-Theme-Variablen. Nach Änderungen zuerst `npm run build` ausführen. `dist/` wird mit versioniert, sodass HACS die einzelne gebündelte Datei direkt findet. Keine CDN-Abhängigkeiten zur Laufzeit.
-
-CI prüft Tests, Build und Übereinstimmung von Quellcode/Distribution. Die HACS-Validierung läuft für das öffentliche Repository zusätzlich. Ein Tag `v<package.json-Version>` baut und testet erneut und erstellt ein GitHub-Release mit JavaScript-Asset. Vor dem nächsten Release Paketversion, Lockdatei und Changelog aktualisieren, neu bauen und einen neuen Tag verwenden. Aktueller Teststand: Build und alle 29 Tests erfolgreich; ein Test am echten Gerät steht aus.
-
-## Gestaltung
-
-Kompakte Home-Assistant-Gerätekarte mit Gerätename, Zustand, Geschwindigkeitsregler und einer Reihe aus fünf Icon-Tasten: Normal/Natural, Stärke, Schwenken, Alltag, Cycling. Das Fan-Symbol schaltet direkt ein/aus und rotiert im Betrieb; ein separater Power-Button entfällt. Die schmale Vorschau ist 280 px breit, die breite Ansicht nutzt zwei Spalten und passt sich per Container Query an ihren tatsächlichen Platz an. Alle Tasten haben mindestens 44 × 44 px Bedienfläche, zugängliche Namen, Tooltips und sichtbaren Tastaturfokus. Ein zusätzliches Modusmenü erscheint nur bei weiteren Presets. Der Gerätename öffnet die Details.
-
-Die Karte verwendet `ha-card` und `ha-icon` sowie eigene HTML-Bedienelemente. Hintergrund, Flächen, Text, Akzent, Rahmen, Radius und Schatten übernehmen Home-Assistant-Theme-Variablen und reagieren auf Theme-Wechsel. Normal und Natural haben eigene blaue beziehungsweise grüne Standardfarben, die im Theme überschrieben werden können. Die Demo definiert hierfür hellere Dark-Mode-Farben; das ist keine automatische Änderung der Standardfarben in Home Assistant.
-
-Anpassbar per CSS: `--smart-fan-accent`, `--smart-fan-normal-color`, `--smart-fan-natural-color`. In einem Home-Assistant-Theme können die Variablen so gesetzt werden:
+The card uses `ha-card`, `ha-icon` and Home Assistant CSS theme variables for background, text, borders, radius and shadows. Normal and Natural colors can be overridden in your theme:
 
 ```yaml
 smart-fan-accent: "#80bfff"
@@ -144,8 +85,22 @@ smart-fan-normal-color: "#80bfff"
 smart-fan-natural-color: "#75d79b"
 ```
 
-Die lokale Demo verwendet Material Design Icons, siehe [Icon-Lizenz](docs/MDI-LICENSE). Die installierte Karte verwendet Home Assistants `ha-icon`; das Zeitfahrrad ist ein eingebettetes SVG. Es wird keine zusätzliche Icon-Bibliothek geladen.
+Controls have at least 44 × 44 px touch targets, accessible names and visible keyboard focus. The fan animation respects the reduced motion setting. All card and editor labels are English; device names and integration presets retain their original values.
 
-## Lizenz
+## Development
 
-MIT, siehe [LICENSE](LICENSE).
+```sh
+npm ci
+npm run check
+npm run dev
+```
+
+Open the [light preview](http://127.0.0.1:4173/) or [dark preview](http://127.0.0.1:4173/demo/dark.html). Both load the real built card with simulated devices and send no commands to Home Assistant. Rebuild after editing source files. The demo uses [Material Design Icons](docs/MDI-LICENSE); the installed card uses Home Assistant's icon components.
+
+CI runs tests, builds the bundle and checks that the committed distribution matches the source. HACS validation runs for the public repository. A `v<package.json version>` tag builds, tests and creates a release with the JavaScript asset. Runtime dependencies are bundled; no CDN is required.
+
+Service sequences, failure paths, state rendering, editor loading and Set / Lock are tested with mocked Home Assistant. Physical movement and integration latency still require a real-device test.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
