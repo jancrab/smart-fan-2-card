@@ -11,3 +11,4 @@ await build({
   legalComments: 'eof',
   define: { __VERSION__: JSON.stringify(version) },
 });
+await build({ entryPoints: ['demo/icon.js'], outfile: 'demo/icons.js', bundle: true, format: 'esm', target: 'es2022', minify: true, legalComments: 'eof' });

@@ -4,24 +4,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Smart Fan 2 · Karten-Vorschau</title>
 <style>
-  body { margin:0; padding:40px; background:#e7ede7; color:#203a35; font-family:Aptos,sans-serif; }
-  main { max-width:1150px; margin:auto; } h1 { font-weight:400; font-size:32px; } .label { color:#6b7e73; font-size:12px; letter-spacing:.12em; text-transform:uppercase; }
-  .layouts { display:grid; grid-template-columns:350px minmax(0,1fr); gap:30px; align-items:start; margin-top:30px; }
-  smart-fan-2-card { display:block; } ha-card { box-shadow:0 12px 40px #203a3510; } #log { font-size:12px; margin-top:28px; white-space:pre-wrap; overflow-wrap:anywhere; } @media(max-width:950px) { .layouts { grid-template-columns:1fr; } body { padding:20px; } .compact { max-width:350px; } }
+  body { margin:0; padding:32px; background:#f4f5f6; color:#24292e; font-family:Arial,sans-serif; }
+  main { max-width:920px; margin:auto; } h1 { font-weight:600; font-size:18px; margin:0 0 28px; } .label { color:#656e77; font-size:12px; margin:0 0 10px; }
+  .layouts { display:grid; grid-template-columns:280px minmax(0,1fr); gap:24px; align-items:start; }
+  smart-fan-2-card { display:block; } details { margin-top:28px; font-size:12px; color:#656e77; } summary { cursor:pointer; padding:12px 0; } input { padding:6px; border:1px solid #d6dbe0; border-radius:6px; } #log { font-size:12px; white-space:pre-wrap; overflow-wrap:anywhere; } @media(max-width:760px) { .layouts { grid-template-columns:1fr; } body { padding:20px; } .compact { max-width:280px; } }
 </style>
-<main><p class="label">Lokale Vorschau · simulierte Geräte</p><h1>Eine Karte. Zwei Perspektiven.</h1>
-<p><label>Cycling-Zielwinkel: <input id="target" type="number" min="-120" max="120" step="1" value="-60"> °</label> · <span id="position">Kopfposition: 0°</span></p>
-<p class="label">Positionssensor in dieser Demo simuliert · Zielwinkel und Entitäten sind im HA-Karteneditor einstellbar</p>
-<div class="layouts"><section class="compact"><p class="label">Schmal / Dashboard</p><smart-fan-2-card id="compact"></smart-fan-2-card></section><section><p class="label">Breit / Web UI</p><smart-fan-2-card id="wide"></smart-fan-2-card></section></div><p id="log" role="status">Bereit. Bedienelemente ausprobieren.</p></main>
+<main><h1>Ventilator</h1>
+<div class="layouts"><section class="compact"><p class="label">Dashboard · 280 px</p><smart-fan-2-card id="compact"></smart-fan-2-card></section><section><p class="label">Breite Ansicht</p><smart-fan-2-card id="wide"></smart-fan-2-card></section></div>
+<details><summary>Demo-Einstellungen</summary><p>Simulierte Geräte, keine Verbindung zu Home Assistant.</p><p><label>Cycling-Zielwinkel: <input id="target" type="number" min="-120" max="120" step="1" value="-60"> °</label> · <span id="position">Kopfposition: 0°</span></p><p id="log" role="status">Bereit.</p></details></main>
 <script type="module">
-class DemoIcon extends HTMLElement {
-  connectedCallback() {
-    const shadow=this.attachShadow({mode:'open'});
-    shadow.innerHTML='<style>:host{display:inline-flex;align-items:center;justify-content:center;width:var(--mdc-icon-size,24px);height:var(--mdc-icon-size,24px)}span{font-size:var(--mdc-icon-size,24px);line-height:1}</style><span></span>';
-    shadow.querySelector('span').textContent=({ 'mdi:fan': '✣', 'mdi:power': '⏻', 'mdi:leaf': '♧', 'mdi:rotate-left': '↶', 'mdi:arrow-left-right': '↔' })[this.getAttribute('icon')] || '•';
-  }
-}
-customElements.define('ha-icon', DemoIcon);
+await import('/demo/icons.js');
 await import('../dist/smart-fan-2-card.js');
 let state = { state:'on', attributes:{ friendly_name:'Smartmi Standing Fan 2S', supported_features:59, percentage:33, percentage_step:1, oscillating:true, preset_modes:['Straight Wind','Natural Wind'], preset_mode:'Straight Wind' } };
 let position=0, sweep=30, movement;

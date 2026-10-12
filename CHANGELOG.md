@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Kompaktes Layout mit kleinen Geräte-Icons und einer gemeinsamen Reihe für Natural, Stärke, Schwenken und Cycling.
+- Große Lüftergrafik, doppelte Prozentanzeige, Branding-Fußzeile und redundantes Modusmenü entfernt.
+- Mindestens 44-px-Bedienflächen, zugängliche Namen, Tooltips und sichtbarer Tastaturfokus.
+- Breite Variante passt sich an ihre tatsächliche Containerbreite an.
+- Lokale Vorschau mit echten Material Design Icons.
+
 ## 0.2.0
 
 - Cycling im visuellen Editor: Ablauf, Schwenkbereich-Entität, Positionsrückmeldung, Zielwinkel, Maximalwinkel, Toleranz und Zeitlimit einstellbar.

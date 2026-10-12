@@ -2,7 +2,7 @@
 
 Home-Assistant-Dashboard-Karte für Smartmi Standing Fan 2S / Smart Fan 2 und andere `fan.*`-Entitäten. Der visuelle Editor bietet alle Fan-Entitäten zur Auswahl an. Name und unterstützte Funktionen werden aus der ausgewählten Entität übernommen.
 
-![Schmales und breites Layout in der lokalen Demo](docs/preview.png)
+![Schmales und breites Layout in der lokalen Demo](docs/compact-preview.png)
 
 ## Funktionen
 
@@ -87,7 +87,9 @@ CI prüft Tests, Build und Übereinstimmung von Quellcode/Distribution. Die HACS
 
 ## Gestaltung
 
-Ruhige Geräteoberfläche mit kreisförmigem Lüfterinstrument und großer Prozentanzeige. DFII: 13 (4 + 5 + 5 + 4 − 5). Aptos bzw. die Home-Assistant-Theme-Schrift, Abstände im 4/8-Pixel-Raster, Theme-Farben mit Blau/Grün für die Modi. Nur der laufende Lüfter animiert; `prefers-reduced-motion` stoppt die Animation. Anpassbar per CSS: `--smart-fan-accent`, `--smart-fan-normal-color`, `--smart-fan-natural-color`.
+Kompakte Home-Assistant-Gerätekarte mit Gerätename, Zustand, Geschwindigkeitsregler und einer Reihe aus vier Icon-Tasten: Normal/Natural, Stärke, Schwenken, Cycling. Keine dekorative Lüfteranimation. Die schmale Vorschau ist 280 px breit, die breite Ansicht nutzt zwei Spalten und passt sich per Container Query an ihren tatsächlichen Platz an. Geräteschrift und Farben folgen dem HA-Theme. Alle Tasten haben mindestens 44 × 44 px Bedienfläche, zugängliche Namen, Tooltips und sichtbaren Tastaturfokus. Ein zusätzliches Modusmenü erscheint nur bei weiteren Presets. Der Gerätename öffnet die Details.
+
+Anpassbar per CSS: `--smart-fan-accent`, `--smart-fan-normal-color`, `--smart-fan-natural-color`. Die lokale Demo verwendet Material Design Icons, siehe [Icon-Lizenz](docs/MDI-LICENSE). Die installierte Karte verwendet Home Assistants `ha-icon` und lädt keine zusätzliche Icon-Bibliothek.
 
 ## Lizenz
 
