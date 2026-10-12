@@ -84,13 +84,12 @@ export class SmartFan2Card extends LitElement {
     return html`
       <ha-card class=${this._config.layout} aria-busy=${!!this._pending}>
         <header>
-          <div class=${`fan ${view.on && view.available ? 'running' : ''}`} aria-hidden="true"><ha-icon icon="mdi:fan"></ha-icon></div>
+          <button class=${`fan power ${view.on && view.available ? 'running' : ''}`} title=${view.on ? 'Ausschalten' : 'Einschalten'} aria-label=${view.on ? 'Ausschalten' : 'Einschalten'} aria-pressed=${view.on} ?disabled=${disabled}
+            @click=${() => this._call(view.on ? 'turn_off' : 'turn_on')}><ha-icon icon="mdi:fan" aria-hidden="true"></ha-icon></button>
           <button class="details" @click=${moreInfo} title="Gerätedetails öffnen" aria-label="Gerätedetails öffnen">
             <h2>${this._config.name || state?.attributes.friendly_name || 'Ventilator'}</h2>
             <span class="status" role="status">${this._cycling ? 'Positioniert …' : this._pending ? 'Wird gesendet …' : this._config.subtitle ? `${this._config.subtitle} · ${status}` : status}</span>
           </button>
-          <button class="power" title=${view.on ? 'Ausschalten' : 'Einschalten'} aria-label=${view.on ? 'Ausschalten' : 'Einschalten'} aria-pressed=${view.on} ?disabled=${disabled}
-            @click=${() => this._call(view.on ? 'turn_off' : 'turn_on')}><ha-icon icon="mdi:power"></ha-icon></button>
         </header>
         <div class="settings">
         ${view.speed ? html`<label class="speed"><ha-icon icon="mdi:weather-windy" aria-hidden="true"></ha-icon>
@@ -110,7 +109,13 @@ export class SmartFan2Card extends LitElement {
             ${view.oscillate ? html`<button class="oscillate" ?disabled=${disabled || !view.on} aria-label=${state.attributes.oscillating ? 'Schwenken ausschalten' : 'Schwenken einschalten'} title=${state.attributes.oscillating ? 'Schwenken an' : 'Schwenken aus'} aria-pressed=${!!state.attributes.oscillating}
               @click=${() => this._call('oscillate', { oscillating: !state.attributes.oscillating })}><ha-icon icon="mdi:arrow-left-right"></ha-icon></button>` : nothing}
             <button class="cycling" ?disabled=${!this._cycling && (disabled || !view.on || !view.oscillate || !canCycle)} aria-label=${cyclingLabel} aria-pressed=${!!this._cycling} title=${canCycle ? cyclingLabel : 'Cycling im Editor konfigurieren'}
-              @click=${() => this._cycleLeft()}><ha-icon icon=${this._cycling ? 'mdi:stop' : 'mdi:rotate-left'}></ha-icon></button>
+              @click=${() => this._cycleLeft()}>${this._cycling ? html`<ha-icon icon="mdi:stop"></ha-icon>` : html`<svg class="time-trial" viewBox="0 0 32 26" aria-hidden="true" focusable="false">
+                <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="6.5" cy="19" r="5.2"/><circle cx="25.5" cy="19" r="5.2"/>
+                  <path d="M6.5 19 12 10 19 19H6.5M12 10h10l3.5 9M19 19l3-9V8h3M10 10h4"/>
+                  <path d="M13 5.5h7l3 2h4M13 5.5l-2 5 5 3-2 5" stroke-width="2"/>
+                </g><path d="M20.2 2.7c0-1.2 1-2.2 2.3-2.2 1.4 0 2.7.9 3.1 2.1l-2.8 1.4c-1.4.6-2.6-.1-2.6-1.3Z" fill="currentColor"/>
+              </svg>`}</button>
           </div>
           ${view.presets.length && !(modes.supported && view.presets.length === 2) ? html`<label class="preset"><ha-icon icon="mdi:tune-variant" aria-hidden="true"></ha-icon><select aria-label="Modus" ?disabled=${disabled || !view.on}
             @change=${event => this._call('set_preset_mode', { preset_mode: event.target.value })}>

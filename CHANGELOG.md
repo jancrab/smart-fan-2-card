@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0
+
+- Fan-Symbol übernimmt Ein/Aus; separaten Power-Button entfernt.
+- Fan-Icon rotiert im Betrieb und steht ausgeschaltet still; respektiert „Bewegung reduzieren“.
+- Cycling zeigt ein eingebettetes Rennrad-SVG mit Fahrer in Zeitfahrhaltung. Beim Zielwinkel-Ablauf bleibt die Stopptaste erhalten.
+- Fan-Schalter bleibt auch in sehr schmalen Karten verfügbar und hat mindestens 44 × 44 px Bedienfläche.
+- Interaktive Dark-Mode-Vorschau mit beiden Layouts und Theme-Variablen ergänzt.
+- README mit aktuellem Screenshot, Installation, Cache-Aktualisierung und HACS-Button aktualisiert. Repository öffentlich für HACS Custom Repository verfügbar.
+
+Build und alle 18 Tests erfolgreich. Noch nicht am echten Gerät getestet.
+
 ## 0.3.0
 
 - Kompaktes Layout mit kleinen Geräte-Icons und einer gemeinsamen Reihe für Natural, Stärke, Schwenken und Cycling.

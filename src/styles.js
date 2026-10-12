@@ -45,8 +45,11 @@ export const cardStyles = css`
   @media (hover: hover) { button:not(:disabled):hover { background: var(--surface); } }
   button:not(:disabled):active { filter: brightness(.92); }
   ha-icon { --mdc-icon-size: 22px; pointer-events: none; }
-  .fan { display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 38px; border-radius: 12px; background: var(--surface); color: var(--muted); }
+  .fan { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 44px; border-radius: 12px; background: var(--surface); color: var(--muted); }
   .fan ha-icon { --mdc-icon-size: 25px; }
+  .fan.running ha-icon { animation: fan-spin 2s linear infinite; }
+  @keyframes fan-spin { to { transform: rotate(360deg); } }
+  .time-trial { width: 28px; height: 24px; pointer-events: none; }
   .running { color: var(--accent); }
   .details { display: block; flex: 1; min-width: 0; text-align: left; border-radius: 4px; }
   h2 { margin: 0 0 3px; font-size: 14px; line-height: 1.35; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
@@ -71,6 +74,6 @@ export const cardStyles = css`
   .wide .error { grid-column: 1/-1; }
   .wide .speed { margin-top: 0; }
   @container (max-width: 430px) { ha-card.wide { display: block; } .wide .speed { margin-top: 6px; } }
-  @container (max-width: 240px) { .quick-controls { display: grid; grid-template-columns: repeat(2, minmax(44px, 1fr)); } .fan { display: none; } }
-  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+  @container (max-width: 240px) { .quick-controls { display: grid; grid-template-columns: repeat(2, minmax(44px, 1fr)); } }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } .fan.running ha-icon { animation: none; } }
 `;
