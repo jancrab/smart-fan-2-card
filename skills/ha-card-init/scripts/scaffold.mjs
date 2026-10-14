@@ -40,6 +40,6 @@ await mkdir(target, { recursive: true });
 await copy(source);
 if (options.git) {
   execFileSync('git', ['init', '-b', 'main'], { cwd: target, stdio: 'inherit' });
-  if (options['git-name']) execFileSync('git', ['config', '--local', 'user.name', options['git-name']], { cwd: target });
+  execFileSync('git', ['config', '--local', 'user.name', options['git-name'] || 'jancrab'], { cwd: target });
 }
 console.log(`Created ${options.name} at ${target}. Next: npm install, npm run check, then implement the requested controls. No remote repository was created.`);

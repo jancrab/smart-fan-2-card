@@ -48,9 +48,11 @@ test('invalid names fail before creating a project and generic mode stays domain
   assert.match(await readFile(join(base, 'generic/src/example-card.js'), 'utf8'), /const domain = "";/);
 }));
 
-test('optional Git initialization uses main and only the requested local name', async () => isolated(async base => {
-  const target = join(base, 'git'); generate(target, '--git', '--git-name', 'jancrab');
+test('optional Git initialization defaults to jancrab and supports a local override', async () => isolated(async base => {
+  const target = join(base, 'git'); generate(target, '--git');
   assert.equal(execFileSync('git', ['-C', target, 'symbolic-ref', '--short', 'HEAD'], { encoding: 'utf8' }).trim(), 'main');
   assert.equal(execFileSync('git', ['-C', target, 'config', '--local', '--get', 'user.name'], { encoding: 'utf8' }).trim(), 'jancrab');
   assert.throws(() => execFileSync('git', ['-C', target, 'remote', 'get-url', 'origin'], { stdio: 'pipe' }));
+  const other = join(base, 'other'); generate(other, '--git', '--git-name', 'Another Author');
+  assert.equal(execFileSync('git', ['-C', other, 'config', '--local', '--get', 'user.name'], { encoding: 'utf8' }).trim(), 'Another Author');
 }));

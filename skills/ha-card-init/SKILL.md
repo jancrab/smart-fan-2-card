@@ -17,7 +17,7 @@ Run the helper from this skill's directory (absolute script paths also work):
 node scripts/scaffold.mjs --path /absolute/new-card --name example-card --title "Example Card" --owner jancrab --domain light --git --git-name jancrab
 ```
 
-`--domain` is optional. `--git` initializes main locally; `--git-name` sets only the new repository's user.name. Preserve inherited email unless the user asks to change it. The helper refuses nonempty targets and does not install dependencies, create GitHub repositories, push or release.
+`--domain` is optional. `--git` initializes main locally and sets the new repository's user.name to this user's preferred default, `jancrab`. `--git-name` overrides that name. Preserve inherited email unless the user asks to change it. The helper refuses nonempty targets and does not install dependencies, create GitHub repositories, push or release.
 
 Then install dependencies in the generated folder, run npm run check, and commit the generated package-lock.json and built dist file with the implementation. Inspect the generated AGENTS.md and adapt device-specific guidance to the actual request. Use demo/index.html for local previews; label simulated states clearly. Inspect the generated baseline before adding controls.
 
