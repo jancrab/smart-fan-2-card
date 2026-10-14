@@ -100,6 +100,10 @@ Controls have at least 44 × 44 px touch targets, accessible names and visible k
 
 ## Development
 
+For future cards and new chats, start with [AGENTS.md](AGENTS.md) and the
+[reusable custom-card workflow](docs/custom-card-workflow.md). They preserve the
+HACS, editor, device-control, testing and GitHub release lessons from this project.
+
 ```sh
 npm ci
 npm run check

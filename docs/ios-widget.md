@@ -4,6 +4,12 @@ Use the official Home Assistant Companion app's **Custom Widget**. There is no
 separate iOS app, Apple developer account, TestFlight build or dashboard card to
 install. Home Assistant runs the actions on the server.
 
+![Illustrative six-action widget layout](ios-widget-preview.png)
+
+This is an HTML layout illustration, not a screenshot of an installed iPhone
+widget. The Companion app controls the actual tile arrangement, sizing and colors.
+Preview it locally at `/demo/ios-widget.html` while the development server is running.
+
 ## 1. Import the two script blueprints
 
 [![Import controller blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fjancrab%2Fsmart-fan-2-card%2Fblob%2Fmain%2Fblueprints%2Fscript%2Ffan_widget_controller.yaml)
