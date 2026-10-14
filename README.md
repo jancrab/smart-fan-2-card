@@ -104,6 +104,11 @@ For future cards and new chats, start with [AGENTS.md](AGENTS.md) and the
 [reusable custom-card workflow](docs/custom-card-workflow.md). They preserve the
 HACS, editor, device-control, testing and GitHub release lessons from this project.
 
+The reusable [ha-card-init skill](skills/ha-card-init/SKILL.md) scaffolds independent
+card repositories with their own AGENTS.md, editor, tests and release workflows.
+Its generator refuses existing nonempty folders and leaves remote publication to
+the authorized task. Install the skill folder into your Codex skills directory.
+
 ```sh
 npm ci
 npm run check

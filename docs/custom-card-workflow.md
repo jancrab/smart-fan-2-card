@@ -6,7 +6,7 @@ This file records verified experience from Smart Fan 2 Card. Reuse it for future
 
 Use one GitHub repository per independently installed HACS card, with its own package version, bundle and releases. Use a corresponding local project folder. Start a new chat for a distinct card or substantial feature; a chat does not require a new repository. Small changes to the same card belong in the same repository.
 
-For a new card, copy the general workflow and adapt AGENTS.md. Use this repository as a reference for the build/release/editor setup; do not copy fan-specific commands or old git history blindly. A separate starter repository is useful once more cards share a stable scaffold. No starter repository or global skill has been created by this document.
+For a new card, use the reusable [ha-card-init skill](../skills/ha-card-init/SKILL.md). Its generator embeds a general AGENTS.md, working guide, functioning theme-native card, native editor, tests, demo and HACS build/release workflows. It refuses nonempty destinations and can initialize a fresh local Git repository with the requested commit name. It does not carry over fan-specific controls, old Git history or remote-publishing authorization. A versioned copy of the skill lives in this repository; install that folder under your Codex skills directory for use in other projects.
 
 Codex discovers repository AGENTS.md instructions when working in that repository. A file in this fan repository is not automatically inherited by unrelated project folders. Include a copy or explicit reference in each new project. See [official AGENTS.md guidance](https://developers.openai.com/codex/guides/agents-md).
 

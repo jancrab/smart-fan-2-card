@@ -11,3 +11,4 @@ Read `docs/custom-card-workflow.md` before changing release, HACS, editor or dev
 - Commit the rebuilt dist bundle with source changes. Before a release, synchronize package.json, package-lock.json and CHANGELOG.md; use a matching v-version tag and verify GitHub release assets and validation jobs.
 - Never describe mocked tests or an HTML preview as a real Home Assistant, iPhone or physical-device test. Label layout illustrations explicitly.
 - Check git status before editing. Do not overwrite unrelated changes. Remote publishing requires authorization from the current task context; a GitHub credential or this file does not itself authorize publishing.
+- New commits in this repository use the local Git user.name `jancrab`. Preserve the configured email unless the user requests a change; do not rewrite old commits implicitly.

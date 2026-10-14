@@ -1,0 +1,4 @@
+interface:
+  display_name: "Home Assistant Card Starter"
+  short_description: "Initialize HACS card repos with reusable guidance"
+  default_prompt: "Use $ha-card-init to initialize a Home Assistant custom card repository with AGENTS.md, a visual editor, tests and release workflows."
