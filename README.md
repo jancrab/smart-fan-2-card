@@ -2,14 +2,16 @@
 
 A Home Assistant dashboard card for Smartmi Standing Fan 2S / Smart Fan 2 and compatible `fan.*` entities. Select a fan and a layout; the card reads its name, supported controls and modes automatically.
 
-Current version: **0.9.0**.
+Latest published version: **0.9.0**. The working tree includes an unreleased airflow design update.
 
-![Compact and wide layouts in dark mode](docs/dark-preview.png)
+![Light and dark airflow design with simulated data](docs/airflow-preview.jpg)
+
+[Design notes and appearance settings](docs/design-style.md). The screenshot shows the unreleased local build with simulated data.
 
 ## Features
 
 - Compact dashboard and wide web layouts, responsive to the available space.
-- Click the animated fan icon to turn power on or off. Respects reduced motion.
+- Click the fan icon to turn power on or off. A quiet airflow scene follows the reported speed and respects reduced motion.
 - Speed slider and strength levels at 33 / 66 / 100%.
 - Normal (blue) / Natural (green) toggle, using the exact presets exposed by your integration, including `normal` / `nature`.
 - Oscillation toggle and optional sweep angle slider. The slider appears while oscillation is active.
@@ -96,7 +98,22 @@ smart-fan-normal-color: "#80bfff"
 smart-fan-natural-color: "#75d79b"
 ```
 
-Controls have at least 44 × 44 px touch targets, accessible names and visible keyboard focus. The fan animation respects the reduced motion setting. All card and editor labels are English; device names and integration presets retain their original values.
+Controls have at least 44 × 44 px touch targets, accessible names and visible keyboard focus. Airflow pauses outside the viewport, in hidden tabs and with reduced motion. The power icon stays still so airflow is the only continuous animation. All card and editor labels are English; device names and integration presets retain their original values.
+
+Appearance settings in the visual editor are optional and preserve existing YAML:
+
+```yaml
+show_scene: true
+animate_scene: true
+show_summary: true
+show_angle_slider: false
+```
+
+The first three default to true. The existing sweep slider remains opt-in.
+`smart-fan-scene-light` / `smart-fan-scene-dark` override the scene tint;
+`smart-fan-flow-light` / `smart-fan-flow-dark` override the line color. Defaults
+blend the HA card surface with the theme accent. HA's active dark-mode flag selects
+the palette; fonts, text, radius and shadows remain theme-native.
 
 ## Development
 
@@ -122,7 +139,7 @@ python -m pip install -r requirements-test.txt
 python -m unittest discover -s test -p "test_*.py"
 ```
 
-Open the [light preview](http://127.0.0.1:4173/) or [dark preview](http://127.0.0.1:4173/demo/dark.html). Both load the real built card with simulated devices and send no commands to Home Assistant. Rebuild after editing source files. The demo uses [Material Design Icons](docs/MDI-LICENSE); the installed card uses Home Assistant's icon components.
+Open the [interactive Light / Dark design preview](http://127.0.0.1:4173/demo/airflow.html) to test 280 / 360 / 480 px widths, long names, missing data and service errors. Or open the [light preview](http://127.0.0.1:4173/) or [dark preview](http://127.0.0.1:4173/demo/dark.html). Both load the real built card with simulated devices and send no commands to Home Assistant. Rebuild after editing source files. The demo uses [Material Design Icons](docs/MDI-LICENSE); the installed card uses Home Assistant's icon components.
 
 CI runs tests, builds the bundle and checks that the committed distribution matches the source. HACS validation runs for the public repository. A `v<package.json version>` tag builds, tests and creates a release with the JavaScript asset. Runtime dependencies are bundled; no CDN is required.
 

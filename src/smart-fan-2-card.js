@@ -12,7 +12,29 @@ export class SmartFan2Card extends LitElement {
     _error: { state: true },
     _cycling: { state: true },
     _locked: { state: true },
+    _visible: { state: true },
+    _tabVisible: { state: true },
   };
+
+  connectedCallback() {
+    super.connectedCallback();
+    this._visibilityChanged = () => { this._tabVisible = !this.ownerDocument.hidden; };
+    this._visibilityChanged();
+    this.ownerDocument.addEventListener('visibilitychange', this._visibilityChanged);
+    const Observer = this.ownerDocument.defaultView.IntersectionObserver;
+    this._visible = !Observer;
+    if (Observer) {
+      this._observer = new Observer(entries => { this._visible = entries.some(entry => entry.isIntersecting); });
+      this._observer.observe(this);
+    }
+  }
+
+  disconnectedCallback() {
+    this._observer?.disconnect();
+    this._observer = undefined;
+    this.ownerDocument.removeEventListener('visibilitychange', this._visibilityChanged);
+    super.disconnectedCallback();
+  }
 
   setConfig(config) {
     if (this._config?.entity !== config?.entity) { this._cycling = false; this._locked = false; }
@@ -30,7 +52,7 @@ export class SmartFan2Card extends LitElement {
     }
     return document.createElement('smart-fan-2-card-editor');
   }
-  getCardSize() { return this._config?.layout === 'wide' ? 3 : 4; }
+  getCardSize() { return this._config?.layout === 'wide' ? 4 : this._config?.show_angle_slider ? 8 : 7; }
   getGridOptions() { return { columns: this._config?.layout === 'wide' ? 12 : 6, min_columns: 6 }; }
 
   async _cycleLeft() {
@@ -108,37 +130,56 @@ export class SmartFan2Card extends LitElement {
     let everydayProfile;
     try { everydayProfile = profileSettings(this.hass, this._config, 'everyday'); } catch { /* Missing capabilities disable the profile. */ }
     const everydayActive = !!everydayProfile && view.on && state.attributes.preset_mode === everydayProfile.mode && Math.abs(view.percentage - everydayProfile.percentage) < 1 && state.attributes.oscillating === true && angle === everydayProfile.angle;
-    const status = !state ? 'Entity not found' : !view.available ? 'Unavailable' : view.on ? 'Running' : 'Off';
+    const status = !state ? 'Entity not found' : state.state === 'unknown' ? 'Unknown' : !view.available ? 'Unavailable' : view.on ? 'Running' : state.state === 'off' ? 'Off' : 'Unknown';
+    const modeLabel = natural ? 'Natural' : state?.attributes.preset_mode === modes.normal && modes.supported ? 'Normal' : state?.attributes.preset_mode || 'No mode reported';
+    const moving = view.available && view.on && view.percentageKnown && view.percentage > 0;
+    const animate = moving && this._visible && this._tabVisible && this._config.animate_scene !== false;
+    const speedValue = view.available && view.percentageKnown ? Math.round(view.percentage) : '—';
     const moreInfo = () => this.dispatchEvent(new CustomEvent('hass-more-info', { detail: { entityId: this._config.entity }, bubbles: true, composed: true }));
     const cyclingLabel = this._cycling ? 'Lock: stop at the current position' : 'Set: start maximum sweep with the Cycling profile';
     return html`
-      <ha-card class=${this._config.layout} aria-busy=${!!this._pending}>
+      <ha-card class=${this._config.layout} data-dark=${!!this.hass.themes?.darkMode} data-moving=${moving} data-animate=${!!animate} data-scene=${this._config.show_scene !== false} aria-busy=${!!this._pending} style=${`--flow-duration: ${14 - (view.percentage / 100) * 8}s`}>
+        <div class="scene" aria-hidden="true">
+          <svg viewBox="0 0 600 240" preserveAspectRatio="xMidYMid slice"><g class="flow">
+            <path d="M-120 178 C80 178 165 24 320 68 S520 208 740 52"/>
+            <path d="M-120 202 C80 202 165 48 320 92 S520 232 740 76"/>
+            <path d="M-120 226 C80 226 165 72 320 116 S520 256 740 100"/>
+            <path d="M-120 250 C80 250 165 96 320 140 S520 280 740 124"/>
+          </g></svg>
+        </div>
+        <div class="overview">
         <header>
           <button class=${`fan power ${view.on && view.available ? 'running' : ''}`} title=${view.on ? 'Turn off' : 'Turn on'} aria-label=${view.on ? 'Turn off' : 'Turn on'} aria-pressed=${view.on} ?disabled=${disabled}
             @click=${() => this._call(view.on ? 'turn_off' : 'turn_on')}><ha-icon icon="mdi:fan" aria-hidden="true"></ha-icon></button>
           <button class="details" @click=${moreInfo} title="Open device details" aria-label="Open device details">
             <h2>${this._config.name || state?.attributes.friendly_name || 'Fan'}</h2>
-            <span class="status" role="status">${locked ? 'Cycling profile locked' : this._cycling ? 'Sweeping · press Lock to stop' : this._pending ? 'Sending …' : this._config.subtitle ? `${this._config.subtitle} · ${status}` : status}</span>
+            <span class="status" role="status">${this._pending ? 'Sending command …' : !view.available ? status : locked ? 'Cycling profile locked' : this._cycling ? 'Sweeping · press Lock to stop' : this._config.subtitle ? `${this._config.subtitle} · ${status}` : status}</span>
           </button>
         </header>
+        <div class="reading" aria-label=${view.speed ? `Reported speed: ${speedValue}${speedValue === '—' ? '' : ' percent'}` : status}>
+          <div class=${`value ${view.speed ? '' : 'text-value'}`}>${view.speed ? speedValue : status}${view.speed && speedValue !== '—' ? html`<span class="unit">%</span>` : nothing}</div>
+          <span class="reading-label">${view.speed ? 'Reported speed' : 'Fan status'}</span>
+        </div>
+        ${this._config.show_summary !== false ? html`<div class="summary"><span>${view.available ? modeLabel : 'No live data'}</span><span>${view.available && typeof state.attributes.oscillating === 'boolean' && view.oscillate ? state.attributes.oscillating ? angleAvailable ? `Sweep ${angle}°` : 'Oscillating' : 'Fixed' : '—'}</span></div>` : nothing}
+        </div>
         <div class="settings">
         ${view.speed ? html`<label class="speed"><ha-icon icon="mdi:weather-windy" aria-hidden="true"></ha-icon>
-          <input type="range" min="0" max="100" step="1" .value=${String(view.on ? view.percentage : 0)} aria-label="Speed" ?disabled=${profileDisabled}
+          <input type="range" min="0" max="100" step="1" .value=${String(view.on ? view.percentage : 0)} aria-label="Speed" aria-valuetext=${view.available && view.percentageKnown ? `${view.on ? view.percentage : 0} percent` : 'No speed reported'} ?disabled=${profileDisabled}
             @input=${event => { this.renderRoot.querySelector('output').value = `${event.target.value} %`; }}
             @change=${event => this._call('set_percentage', { percentage: Math.max(0, Math.min(100, Number(event.target.value))) })}>
-          <output>${view.available ? `${view.on ? Math.round(view.percentage) : 0} %` : '—'}</output>
+          <output>${view.available && view.percentageKnown ? `${view.on ? Math.round(view.percentage) : 0} %` : '—'}</output>
         </label>` : nothing}
         <div class="controls">
           <div class="quick-controls">
             <button class=${`natural ${natural ? 'enabled' : ''}`} ?disabled=${profileDisabled || !view.on || !modes.supported} aria-pressed=${natural}
               aria-label=${natural ? 'Natural active, switch to Normal' : 'Normal active, switch to Natural'}
               title=${modes.supported ? natural ? 'Natural · switch to Normal' : 'Normal · switch to Natural' : 'Natural: map presets in the editor'}
-              @click=${() => this._call('set_preset_mode', { preset_mode: natural ? modes.normal : modes.natural })}><ha-icon icon=${natural ? 'mdi:leaf' : 'mdi:weather-windy'}></ha-icon></button>
-            ${view.speed ? html`<button class="strength" ?disabled=${profileDisabled} aria-label=${`Strength ${strength}, select next level`}
-              title=${`Strength ${strength} · 33 / 66 / 100 %`} @click=${() => this._call('set_percentage', { percentage: nextStrength(view.percentage).percentage })}><ha-icon icon=${`mdi:numeric-${view.on ? strength : 0}-circle-outline`}></ha-icon></button>` : nothing}
+              @click=${() => this._call('set_preset_mode', { preset_mode: natural ? modes.normal : modes.natural })}><ha-icon icon=${natural ? 'mdi:leaf' : 'mdi:weather-windy'}></ha-icon><span>${natural ? 'Natural' : 'Normal'}</span></button>
+            ${view.speed ? html`<button class="strength" ?disabled=${profileDisabled} aria-label=${view.percentageKnown ? `Strength ${strength}, select next level` : 'Strength unknown, select 33 percent'}
+              title=${view.percentageKnown ? `Strength ${strength} · 33 / 66 / 100 %` : 'Strength unknown · select 33 %'} @click=${() => this._call('set_percentage', { percentage: nextStrength(view.percentage).percentage })}><ha-icon icon=${view.percentageKnown ? `mdi:numeric-${view.on ? strength : 0}-circle-outline` : 'mdi:weather-windy'}></ha-icon><span>Strength</span></button>` : nothing}
             ${view.oscillate ? html`<button class="oscillate" ?disabled=${disabled || !view.on} aria-label=${state.attributes.oscillating ? 'Turn oscillation off' : 'Turn oscillation on'} title=${state.attributes.oscillating ? 'Oscillation on' : 'Oscillation off'} aria-pressed=${!!state.attributes.oscillating}
-              @click=${() => this._call('oscillate', { oscillating: !state.attributes.oscillating })}><ha-icon icon="mdi:arrow-left-right"></ha-icon></button>` : nothing}
-            <button class="everyday" ?disabled=${disabled || !everydayProfile} aria-label="Activate Everyday profile" aria-pressed=${everydayActive} title="Everyday: mode, speed and oscillation" @click=${() => this._everyday()}><ha-icon icon="mdi:sofa-outline"></ha-icon></button>
+              @click=${() => this._call('oscillate', { oscillating: !state.attributes.oscillating })}><ha-icon icon="mdi:arrow-left-right"></ha-icon><span>Sweep</span></button>` : nothing}
+            <button class="everyday" ?disabled=${disabled || !everydayProfile} aria-label="Activate Everyday profile" aria-pressed=${everydayActive} title="Everyday: mode, speed and oscillation" @click=${() => this._everyday()}><ha-icon icon="mdi:sofa-outline"></ha-icon><span>Everyday</span></button>
             <button class="cycling" ?disabled=${disabled || !view.oscillate || (!this._cycling && !canCycle)} aria-label=${cyclingLabel} aria-pressed=${!!this._cycling || locked} title=${canCycle || this._cycling ? cyclingLabel : 'Cycling needs an available sweep angle and supported profile'}
               @click=${() => this._cycleLeft()}><ha-icon icon=${this._cycling ? 'mdi:lock-outline' : 'mdi:crosshairs'}></ha-icon><span>${this._cycling ? 'Lock' : 'Set'}</span></button>
           </div>
@@ -179,11 +220,11 @@ class SmartFan2CardEditor extends LitElement {
       { name: `${kind}_percentage`, selector: { number: { min: 1, max: 100, step: 1, mode: 'slider', unit_of_measurement: '%' } } },
       ...(kind === 'everyday' ? [{ name: 'everyday_angle', selector: { number: { min: 1, max: 360, step: 1, mode: 'box', unit_of_measurement: '°' } } }] : []),
     ];
-    const labels = { entity: 'Fan', name: 'Name (optional)', subtitle: 'Subtitle (optional)', layout: 'Layout', show_angle_slider: 'Show sweep angle slider', angle_entity: 'Sweep angle entity (auto-detected when empty)', natural_preset: 'Natural preset name', normal_preset: 'Normal preset name', everyday_preset: 'Mode', everyday_percentage: 'Speed', everyday_angle: 'Sweep angle (default 30°)', cycling_preset: 'Locked mode', cycling_percentage: 'Locked speed' };
-    const form = schema => html`<ha-form .hass=${this.hass} .data=${{ layout: 'compact', everyday_preset: 'nature', everyday_percentage: 66, everyday_angle: 30, cycling_preset: 'nature', cycling_percentage: 100, ...this._config }} .schema=${schema} .computeLabel=${field => labels[field.name]} @value-changed=${event => this._changed(event)}></ha-form>`;
+    const labels = { show_scene: 'Show airflow scene', animate_scene: 'Animate airflow while running', show_summary: 'Show mode and sweep summary', entity: 'Fan', name: 'Name (optional)', subtitle: 'Subtitle (optional)', layout: 'Layout', show_angle_slider: 'Show sweep angle slider', angle_entity: 'Sweep angle entity (auto-detected when empty)', natural_preset: 'Natural preset name', normal_preset: 'Normal preset name', everyday_preset: 'Mode', everyday_percentage: 'Speed', everyday_angle: 'Sweep angle (default 30°)', cycling_preset: 'Locked mode', cycling_percentage: 'Locked speed' };
+    const form = schema => html`<ha-form .hass=${this.hass} .data=${{ show_scene: true, animate_scene: true, show_summary: true, layout: 'compact', everyday_preset: 'nature', everyday_percentage: 66, everyday_angle: 30, cycling_preset: 'nature', cycling_percentage: 100, ...this._config }} .schema=${schema} .computeLabel=${field => labels[field.name]} @value-changed=${event => this._changed(event)}></ha-form>`;
     return html`${form([{ ...entity('entity'), required: true }, { name: 'layout', selector: { select: { options: [{ value: 'compact', label: 'Compact · Dashboard' }, { value: 'wide', label: 'Wide · Web UI' }] } } }])}
       <p>Name, speed, oscillation and modes come from the fan entity.</p>
-      <details><summary>Appearance (optional)</summary>${form([text('name'), text('subtitle'), { name: 'show_angle_slider', selector: { boolean: {} } }])}</details>
+      <details><summary>Appearance (optional)</summary>${form([text('name'), text('subtitle'), ...['show_scene', 'animate_scene', 'show_summary'].map(name => ({ name, selector: { boolean: {} } })), { name: 'show_angle_slider', selector: { boolean: {} } }])}</details>
       ${!modes.supported ? html`<details><summary>Preset mapping (optional)</summary>${form([text('natural_preset'), text('normal_preset')])}</details>` : nothing}
       <details><summary>Everyday profile</summary>${form(profileFields('everyday'))}<p>Turns on oscillation at the selected sweep angle.</p></details>
       <details><summary>Cycling · Set / Lock</summary>${form(profileFields('cycling'))}${form([entity('angle_entity')])}

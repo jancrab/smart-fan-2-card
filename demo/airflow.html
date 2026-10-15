@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fan · Airflow design preview</title>
+<style>
+:root { font-family: system-ui,sans-serif; color:#263442; background:#e9edef; }
+* { box-sizing:border-box; } body{margin:0;padding:32px;} main{max-width:1200px;margin:auto;} h1{font-size:24px;font-weight:500;margin:0 0 8px;} .intro{font-size:14px;color:#52606b;margin:0 0 24px;line-height:1.6;}
+.toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:24px;} select,button{font:inherit;padding:10px;min-height:44px;border-radius:8px;border:1px solid #8e9ca8;background:#fff;color:#263442;} label{font-size:13px;display:flex;align-items:center;gap:8px;} input{width:20px;height:20px;}
+.matrix{display:flex;gap:24px;flex-wrap:wrap;align-items:start;} section{padding:20px;background:#f6f8f9;border-radius:20px;max-width:100%;} section.dark{background:#101a22;--primary-text-color:#e7eef2;--secondary-text-color:#a7b7c2;--card-background-color:#192630;--primary-color:#89bfd6;--error-color:#ff9994;color-scheme:dark;}
+section.light{--primary-text-color:#263442;--secondary-text-color:#556774;--card-background-color:#fcfdfd;--primary-color:#397b9b;}
+.caption{color:#617481;font-size:12px;margin:0 0 12px;} .dark .caption{color:#a7b7c2;} smart-fan-2-card{width:360px;max-width:100%;} #log{font-size:12px;color:#52606b;white-space:pre-wrap;} .wide-row{margin-top:24px;} .wide-row smart-fan-2-card{width:720px;} @media(max-width:600px){body{padding:16px;}section{padding:12px;}.matrix{display:block;}section+section{margin-top:16px;}}
+</style>
+<main><h1>A quieter kind of control.</h1><p class="intro">Smart Fan 2 · Airflow design preview<br>Simulated Home Assistant data. Buttons control this preview only.</p>
+<div class="toolbar"><label>Card width <select id="width"><option>280</option><option selected>360</option><option>480</option></select></label><label>Device state <select id="state"><option value="on">Running</option><option value="off">Off</option><option value="unknown">Unknown</option><option value="unavailable">Unavailable</option><option value="missing">Missing speed</option><option value="absent">Missing entity</option><option value="error">Service error</option></select></label><label><input id="long" type="checkbox">Long name</label><label><input id="motion" type="checkbox" checked>Animate scene</label></div>
+<div class="matrix"><section class="light"><p class="caption">LIGHT · COMPACT</p><smart-fan-2-card id="light"></smart-fan-2-card></section><section class="dark"><p class="caption">DARK · COMPACT</p><smart-fan-2-card id="dark"></smart-fan-2-card></section></div>
+<section class="dark wide-row"><p class="caption">DARK · WIDE · 720 PX</p><smart-fan-2-card id="wide"></smart-fan-2-card></section><p id="log" role="status">Ready. Try Everyday, Set and Lock.</p></main>
+<script type="module">
+import './icons.js';
+import '../dist/smart-fan-2-card.js';
+const cards=[...document.querySelectorAll('smart-fan-2-card')];
+const controls={width:document.querySelector('#width'),state:document.querySelector('#state'),long:document.querySelector('#long'),motion:document.querySelector('#motion')};
+let state='on',percentage=66,mode='nature',oscillating=true,angle=30;
+function config(){cards.forEach(card=>card.setConfig({entity:'fan.demo',layout:card.id==='wide'?'wide':'compact',name:controls.long.checked?'Smartmi Standing Fan 2S in the upstairs living room and reading corner':'Living room',show_angle_slider:true,animate_scene:controls.motion.checked}));}
+function update(){cards.forEach(card=>card.hass={themes:{darkMode:card.id!=='light'},states:controls.state.value==='absent'?{}:{'fan.demo':{state,attributes:{supported_features:63,percentage:controls.state.value==='missing'?null:percentage,preset_modes:['nature','normal'],preset_mode:mode,oscillating}},'number.demo_oscillation_angle':{state:String(angle),attributes:{min:1,max:120,step:1}}},callService:async(domain,service,data)=>{
+ document.querySelector('#log').textContent=`Simulated command: ${domain}.${service} ${JSON.stringify(data)}`;
+ await new Promise(resolve=>setTimeout(resolve,250));
+ if(controls.state.value==='error')throw Error('Simulated connection error. Please try again.');
+ if(service==='turn_on')state='on';if(service==='turn_off'){state='off';percentage=0;}
+ if(service==='set_percentage'){percentage=data.percentage;state=percentage?'on':'off';}
+ if(service==='set_preset_mode')mode=data.preset_mode;
+ if(service==='oscillate')oscillating=data.oscillating;
+ if(service==='set_value')angle=data.value;
+ update();
+}});}
+controls.width.onchange=()=>cards.filter(card=>card.id!=='wide').forEach(card=>card.style.width=controls.width.value+'px');
+controls.state.onchange=()=>{state=['off','unknown','unavailable'].includes(controls.state.value)?controls.state.value:'on';percentage=state==='off'?0:66;update();};
+controls.long.onchange=()=>{config();update();};controls.motion.onchange=()=>{config();update();};config();update();
+</script></html>

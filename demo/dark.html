@@ -31,7 +31,7 @@
   .label, details { color: var(--secondary-text-color); }
   input { background: var(--secondary-background-color); color: var(--primary-text-color); border-color: var(--divider-color); }
 </style>
-<main><h1>Fan</h1>
+<main><h1>Fan</h1><p class="label">Simulated Home Assistant data · <a href="/demo/airflow.html">Open Light / Dark design preview</a></p>
 <div class="layouts"><section class="compact"><p class="label">Dashboard · 280 px</p><smart-fan-2-card id="compact"></smart-fan-2-card></section><section><p class="label">Wide layout</p><smart-fan-2-card id="wide"></smart-fan-2-card></section></div>
 <details><summary>Demo settings</summary><p>Simulated devices. No connection to Home Assistant.</p><p>Press Set, then Lock to stop the simulated sweep. <span id="position">Simulated head position: 0°</span></p><p id="log" role="status">Ready.</p></details></main>
 <script type="module">
@@ -41,7 +41,7 @@ let state = { state:'on', attributes:{ friendly_name:'Smartmi Standing Fan 2S', 
 let position=0, sweep=30, movement;
 const config = {entity:'fan.demo',show_angle_slider:true,angle_entity:'number.sweep',name:'Living room'};
 const cards = ['compact','wide'].map(layout => { const card=document.getElementById(layout);card.setConfig({...config,layout});return card; });
-function update() { document.getElementById('position').textContent=`Simulated head position: ${position}°`; const hass={states:{'fan.demo':state,'number.sweep':{state:String(sweep),attributes:{min:1,max:120,step:1}},'sensor.position':{state:String(position)}},callService:async(domain,service,data)=>{
+function update() { document.getElementById('position').textContent=`Simulated head position: ${position}°`; const hass={themes:{darkMode:true},states:{'fan.demo':state,'number.sweep':{state:String(sweep),attributes:{min:1,max:120,step:1}},'sensor.position':{state:String(position)}},callService:async(domain,service,data)=>{
   document.getElementById('log').textContent=JSON.stringify({domain,service,...data},null,2);
   state={...state,attributes:{...state.attributes}};
   if(service==='turn_off' && domain==='fan') state.state='off';

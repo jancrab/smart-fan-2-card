@@ -27,6 +27,10 @@ Codex discovers repository AGENTS.md instructions when working in that repositor
 - Use exact preset strings from preset_modes. Nature/normal capitalization differs between integrations; stale explicit mappings must not block valid discovery.
 - Apply device theme variables, visible keyboard focus, labels/tooltips and reduced motion. Keep disabled state and pending commands understandable.
 
+## Scene and motion lifecycle
+
+The airflow design follows [design-style.md](design-style.md). Use the selected fan's reported speed, never the requested service value, to drive movement. Missing percentage is not zero. Keep decorative SVG separate from controls, noninteractive and hidden from assistive technology. Use IntersectionObserver and document visibility to pause movement, disconnect observers/listeners when removed, and honor reduced motion in CSS. HA's active theme flag selects scene colors; no external fonts or assets are loaded.
+
 ## Device actions and lessons
 
 - Validate profile capabilities and parameter ranges before starting movement. Serialize setup commands and report service errors.

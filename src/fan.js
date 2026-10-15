@@ -13,11 +13,13 @@ export function validateConfig(config) {
 
 export function fanView(state) {
   const features = Number(state?.attributes?.supported_features) || 0;
-  const percentage = Number(state?.attributes?.percentage);
+  const rawPercentage = state?.attributes?.percentage;
+  const percentage = typeof rawPercentage === 'number' ? rawPercentage : NaN;
   const step = Number(state?.attributes?.percentage_step);
   return {
     available: !!state && !['unknown', 'unavailable'].includes(state.state),
     on: state?.state === 'on',
+    percentageKnown: Number.isFinite(percentage),
     percentage: Number.isFinite(percentage) ? Math.max(0, Math.min(100, percentage)) : 0,
     step: Number.isFinite(step) && step > 0 && step <= 100 ? step : 1,
     speed: !!(features & FEATURES.SPEED),

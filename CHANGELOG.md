@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add a theme-native airflow scene, prominent reported speed and mode/sweep summary in both layouts.
+- Keep all existing profiles, service sequences and YAML options; add optional scene, animation and summary switches to the visual editor.
+- Use one continuous animation driven by reported speed; pause it offscreen, in hidden tabs and for reduced motion. Keep the power icon static.
+- Distinguish missing speed from zero; retain reported state while service calls are pending.
+- Add an interactive, explicitly simulated Light / Dark preview and lifecycle/state regression tests.
+
 ## 0.9.0
 
 - Add script blueprints for the Home Assistant iOS Companion app widget: Power, Everyday, Set, Lock, Strength and Natural / Normal.
