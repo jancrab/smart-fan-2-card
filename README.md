@@ -2,11 +2,11 @@
 
 A Home Assistant dashboard card for Smartmi Standing Fan 2S / Smart Fan 2 and compatible `fan.*` entities. Select a fan and a layout; the card reads its name, supported controls and modes automatically.
 
-Latest published version: **0.9.0**. The working tree includes an unreleased airflow design update.
+Current version: **0.10.0**.
 
 ![Light and dark airflow design with simulated data](docs/airflow-preview.jpg)
 
-[Design notes and appearance settings](docs/design-style.md). The screenshot shows the unreleased local build with simulated data.
+[Design notes and appearance settings](docs/design-style.md). The screenshot shows the card with simulated data.
 
 ## Features
 
@@ -32,7 +32,7 @@ See the [HACS custom repository guide](https://hacs.dev/docs/faq/custom_reposito
 ### Manual installation
 
 1. Copy `dist/smart-fan-2-card.js` to `/config/www/smart-fan-2-card.js`.
-2. Under Settings → Dashboards → Resources, add `/local/smart-fan-2-card.js?v=0.9.0` as a **JavaScript module**. Enable advanced mode if needed.
+2. Under Settings → Dashboards → Resources, add `/local/smart-fan-2-card.js?v=0.10.0` as a **JavaScript module**. Enable advanced mode if needed.
 3. Reload the browser and add the card.
 
 For updates, replace the file and change the version query on the existing resource. Do not add duplicate resources. A Home Assistant restart is not required.

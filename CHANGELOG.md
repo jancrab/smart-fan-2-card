@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.0
 
 - Add a theme-native airflow scene, prominent reported speed and mode/sweep summary in both layouts.
 - Keep all existing profiles, service sequences and YAML options; add optional scene, animation and summary switches to the visual editor.
