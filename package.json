@@ -20,6 +20,6 @@
   "devDependencies": {
     "@mdi/js": "^7.4.47",
     "esbuild": "^0.28.2",
-    "happy-dom": "^21.0.1"
+    "happy-dom": "^21.0.4"
   }
 }
